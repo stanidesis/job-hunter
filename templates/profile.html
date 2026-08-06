@@ -178,13 +178,13 @@
                 <div class="field-row">
                     <div class="field">
                         <label>Sender Email (From address)</label>
-                        <div class="help">Fixed to <code>SENDER_EMAIL</code> in <code>.env</code> — it has to match <code>SENDER_APP_PASSWORD</code>. Change it there, not here.</div>
-                        <input type="email" id="sender-email" class="text-input" readonly disabled placeholder="not set in .env">
+                        <div class="help">Fixed to <code>RESEND_FROM</code> in <code>.env</code> (Resend). Change it there, not here. Use a verified domain or <code>onboarding@resend.dev</code> on the free tier.</div>
+                        <input type="text" id="sender-email" class="text-input" readonly disabled placeholder="not set in .env">
                     </div>
                     <div class="field">
                         <label>Recipient Email (your inbox)</label>
-                        <div class="help">Where the daily digest is delivered. Overrides <code>RECIPIENT_EMAIL</code> in <code>.env</code>. Leave blank to use the env value.</div>
-                        <input type="email" id="recipient-email" class="text-input" placeholder="e.g. you@gmail.com">
+                        <div class="help">Where the daily digest is delivered. Overrides <code>RESEND_TO</code> in <code>.env</code>. Leave blank to use the env value.</div>
+                        <input type="email" id="recipient-email" class="text-input" placeholder="e.g. you@example.com">
                     </div>
                 </div>
                 <div class="field">

@@ -54,12 +54,12 @@
 │  • APScheduler triggers pipeline                               │
 │  • 15 job cards in HTML email                                  │
 │  • Each card: job info + 7 search buttons + DM + apply link    │
-│  • Sent via Gmail SMTP (app password)                          │
+│  • Sent via Resend API                                         │
 │  • Marked as emailed — won't resend next day                   │
 └────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-                  parmanandprajapati0009@gmail.com
+                        RESEND_TO inbox
 ```
 
 ---
@@ -71,7 +71,7 @@
 - **APScheduler** runs the daily pipeline at 9 AM IST
 - **Collector** (`core/collector.py`) orchestrates fetching, scoring, deduplication
 - **Scorer** (`core/scorer.py`) rates jobs 0-100 based on rules
-- **Emailer** (`core/emailer.py`) composes HTML email, sends via SMTP
+- **Emailer** (`core/emailer.py`) composes HTML email, sends via Resend API
 - **Sources** (`sources/*.py`) pluggable fetchers — one per job board / ATS platform
 
 ### Frontend (`templates/`, `static/`)
@@ -170,16 +170,17 @@ User clicks a button → LinkedIn opens with relevant people listed → they pic
 
 ## Email Delivery
 
-- **SMTP:** Gmail (smtp.gmail.com:465, SSL)
-- **Auth:** App Password (not regular Gmail password)
+- **Provider:** [Resend](https://resend.com) HTTP API (official Python SDK)
+- **Auth:** `RESEND_API_KEY` environment variable
+- **From / To:** `RESEND_FROM` and `RESEND_TO` (recipient can be overridden per profile)
 - **Format:** HTML with inline CSS + plain text fallback
-- **Size:** ~80KB per email (well under Gmail's 25MB limit)
-- **Rate:** 1 email/day → no spam concerns
+- **Size:** ~80KB per email
+- **Rate:** 1 email/day → well within free-tier limits
 
 Daily at 9 AM IST, the `run_daily_pipeline` function:
 1. Calls `run_collection()` — fetch new jobs
 2. Auto-generates outreach for top 15 new jobs
-3. Sends email
+3. Sends email via Resend
 4. Logs it to `email_log` table
 
 ---

@@ -200,13 +200,20 @@ Check email configuration + recent sends.
 **Response:**
 ```json
 {
+  "provider": "resend",
   "sender_configured": true,
-  "recipient": "parmanandprajapati0009@gmail.com",
+  "sender": "Job Hunter <onboarding@resend.dev>",
+  "sender_source": "env",
+  "recipient": "you@example.com",
+  "recipient_source": "env",
+  "candidate_name": "Alex",
   "scheduled_hour": 9,
   "timezone": "Asia/Kolkata",
   "recent_sends": [...]
 }
 ```
+
+`sender` comes from `RESEND_FROM`. `recipient` is the profile's `recipient_email` when set, otherwise `RESEND_TO`.
 
 ### `POST /api/email/send-now`
 Manually send the daily digest right now.

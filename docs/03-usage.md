@@ -177,6 +177,6 @@ Besides the daily email, you can use the web UI anytime:
 
 ❌ **Don't apply to every job blindly** — read the description first
 ❌ **Don't send the same DM to 15 people on LinkedIn in one hour** — they'll throttle you
-❌ **Don't use the regular Gmail password in `.env`** — use App Password
+❌ **Don't commit your `RESEND_API_KEY`** — keep it in `.env` only
 ❌ **Don't leave old jobs in "messaged" state** — follow up or mark stale
 ❌ **Don't spam HR** — engineering managers have way better response rates

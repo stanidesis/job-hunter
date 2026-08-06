@@ -1,0 +1,1 @@
+{"id":"int-75cf0b97","kind":"field_change","created_at":"2026-08-06T17:30:22.652640254Z","actor":"Stanley Bogode","issue_id":"job-hunter-bze","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Gmail SMTP removed; digests send via Resend (RESEND_API_KEY/FROM/TO); docs and .env.example updated"}}

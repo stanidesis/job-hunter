@@ -271,7 +271,7 @@ Add `candidate_id` to all tables. Switch context via URL or login. Not currently
 ## Disable Features
 
 ### Disable daily email
-Set `SENDER_EMAIL=` (empty) in `.env`. Scheduler skips.
+Leave `RESEND_API_KEY=` or `RESEND_FROM=` empty in `.env`. Scheduler skips.
 
 ### Disable company crawling
 Comment out in `core/collector.py`:
@@ -320,6 +320,6 @@ POST /api/export/sheets?min_score=50&india_friendly=yes
 Then in n8n:
 1. Google Sheets trigger (new row)
 2. Hunter.io node (find email)
-3. Gmail node (send cold email)
+3. Resend (or HTTP) node to send cold email
 
 See [02-setup.md](02-setup.md) for Google Sheets config.

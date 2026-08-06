@@ -28,7 +28,7 @@ from core.profile import (
 )
 from config.settings import (
     HOST, PORT, GOOGLE_SHEETS_CREDS, GOOGLE_SHEET_ID, HUNTER_API_KEY,
-    DAILY_EMAIL_HOUR, DAILY_EMAIL_TIMEZONE, SENDER_EMAIL,
+    DAILY_EMAIL_HOUR, DAILY_EMAIL_TIMEZONE, RESEND_API_KEY, RESEND_FROM, RESEND_TO,
 )
 
 app = FastAPI(title="Job Scraper", version="2.0.0")
@@ -43,9 +43,9 @@ scheduler = AsyncIOScheduler(timezone=DAILY_EMAIL_TIMEZONE)
 async def startup():
     init_db()
 
-    # Schedule daily digest at configured hour IST. The sender is fixed to
-    # SENDER_EMAIL in .env — it has to match SENDER_APP_PASSWORD.
-    if SENDER_EMAIL:
+    # Schedule daily digest at configured hour IST. Requires Resend config
+    # (RESEND_API_KEY + RESEND_FROM). Recipient can still come from profile.
+    if RESEND_API_KEY and RESEND_FROM:
         scheduler.add_job(
             run_daily_pipeline,
             CronTrigger(hour=DAILY_EMAIL_HOUR, minute=0),
@@ -56,7 +56,7 @@ async def startup():
         scheduler.start()
         print(f"Scheduled daily digest at {DAILY_EMAIL_HOUR}:00 IST", flush=True)
     else:
-        print("SENDER_EMAIL not set in .env — daily digest disabled", flush=True)
+        print("RESEND_API_KEY or RESEND_FROM not set in .env — daily digest disabled", flush=True)
 
 
 @app.on_event("shutdown")
@@ -460,18 +460,17 @@ async def api_run_pipeline(send: bool = Query(True)):
 @app.get("/api/email/status")
 async def api_email_status():
     from core.database import get_email_logs
-    import os
     logs = get_email_logs(limit=10)
     out_cfg = get_active_profile().get("outreach") or {}
     profile_recipient = (out_cfg.get("recipient_email") or "").strip()
-    env_recipient = os.getenv("RECIPIENT_EMAIL", "")
-    effective_recipient = profile_recipient or env_recipient
+    effective_recipient = profile_recipient or RESEND_TO
     return {
-        "sender_configured": bool(SENDER_EMAIL) and bool(os.getenv("SENDER_APP_PASSWORD")),
-        "sender": SENDER_EMAIL,
-        "sender_source": "env" if SENDER_EMAIL else "none",
+        "provider": "resend",
+        "sender_configured": bool(RESEND_API_KEY) and bool(RESEND_FROM),
+        "sender": RESEND_FROM,
+        "sender_source": "env" if RESEND_FROM else "none",
         "recipient": effective_recipient,
-        "recipient_source": "profile" if profile_recipient else ("env" if env_recipient else "none"),
+        "recipient_source": "profile" if profile_recipient else ("env" if RESEND_TO else "none"),
         "candidate_name": out_cfg.get("candidate_name") or "",
         "scheduled_hour": DAILY_EMAIL_HOUR,
         "timezone": DAILY_EMAIL_TIMEZONE,

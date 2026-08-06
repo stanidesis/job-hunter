@@ -7,7 +7,7 @@ Complete setup from scratch to a running daily email system.
 ## Prerequisites
 
 - **Python 3.11+** installed
-- A **Gmail account** for sending emails (prefer a secondary one, not your main)
+- A **[Resend](https://resend.com)** account for sending daily digest emails
 - 10 minutes to get API keys
 
 ---
@@ -42,16 +42,20 @@ JSearch aggregates LinkedIn + Indeed + Glassdoor. **Free tier: 200 requests/mont
 Was used for finding contact emails. Replaced with LinkedIn search URLs.
 Key stays in `.env` for future use but can be empty.
 
-### 2c. Gmail App Password
+### 2c. Resend API Key
 
 Required for sending the daily digest email.
 
-1. Go to **https://myaccount.google.com/security**
-2. Enable **2-Step Verification** (required for app passwords)
-3. Go to **https://myaccount.google.com/apppasswords**
-4. App name: `Job Scraper`
-5. Click **Create** — copy the 16-character password
-6. **Don't save the Gmail password — save only the app password**
+1. Sign up at **https://resend.com**
+2. Go to **API Keys** → **Create API Key**
+3. Copy the key (starts with `re_`)
+4. For the **From** address:
+   - **Quick start (free tier):** use `Job Hunter <onboarding@resend.dev>`
+   - **Production:** add and verify your own domain under **Domains**, then use e.g. `Job Hunter <digest@yourdomain.com>`
+5. For the **To** address (`RESEND_TO`): the inbox that receives the daily digest
+   - On the free tier with `onboarding@resend.dev`, you can typically only send **to the email address of your Resend account**
+
+Docs: https://resend.com/docs/send-with-python
 
 ---
 
@@ -70,10 +74,10 @@ RAPIDAPI_KEY=your_rapidapi_key_here
 # Hunter.io — optional, not currently used
 HUNTER_API_KEY=
 
-# Gmail SMTP — required for daily email
-SENDER_EMAIL=your-secondary-gmail@gmail.com
-SENDER_APP_PASSWORD=abcdefghijklmnop
-RECIPIENT_EMAIL=candidate@gmail.com
+# Resend — required for daily email
+RESEND_API_KEY=re_xxxxxxxx
+RESEND_FROM=Job Hunter <onboarding@resend.dev>
+RESEND_TO=you@example.com
 
 # Daily digest timing (IST timezone)
 DAILY_EMAIL_HOUR=9
@@ -85,9 +89,11 @@ GOOGLE_SHEET_ID=
 ```
 
 **Important:**
-- `SENDER_APP_PASSWORD` is the 16-character App Password, **not** your Gmail login password
-- `SENDER_EMAIL` is the sender. It can be any Gmail you control.
-- `RECIPIENT_EMAIL` is where the daily digest gets delivered (the job seeker)
+- `RESEND_API_KEY` is your Resend secret key (`re_…`)
+- `RESEND_FROM` must be a verified sender (or `onboarding@resend.dev` on free tier)
+- `RESEND_TO` is where the daily digest is delivered (the job seeker). Profiles can override this via `recipient_email`.
+
+**Migrating from Gmail SMTP:** remove `SENDER_EMAIL`, `SENDER_APP_PASSWORD`, and `RECIPIENT_EMAIL` from `.env` and set the three `RESEND_*` variables above instead.
 
 ---
 
@@ -113,6 +119,11 @@ You should see:
 ```
 INFO:     Uvicorn running on http://127.0.0.1:8000
 Scheduled daily digest at 9:00 IST
+```
+
+If Resend is not configured:
+```
+RESEND_API_KEY or RESEND_FROM not set in .env — daily digest disabled
 ```
 
 ---
@@ -145,7 +156,7 @@ Click **"Find Contacts for Top Jobs"**. You'll see 15 outreach cards created.
 
 Click **"Send Email Now"** on the outreach page.
 
-Check `RECIPIENT_EMAIL` inbox. Email should arrive in 10-30 seconds.
+Check the `RESEND_TO` inbox (or the profile recipient override). Email should arrive in a few seconds. You can also confirm delivery in the Resend dashboard under **Emails**.
 
 ---
 
@@ -154,7 +165,7 @@ Check `RECIPIENT_EMAIL` inbox. Email should arrive in 10-30 seconds.
 From now on, the system auto-runs every day at 9:00 AM IST:
 1. Collects fresh jobs
 2. Generates outreach for new top-scoring ones
-3. Sends email
+3. Sends email via Resend
 
 **Just keep the server running.** For 24/7 uptime, deploy to a small VPS (see below).
 
@@ -187,7 +198,7 @@ Both offer free tier small apps. Create `Procfile`:
 web: uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
-Add env vars in their dashboard.
+Add env vars in their dashboard (`RESEND_API_KEY`, `RESEND_FROM`, `RESEND_TO`, etc.).
 
 ### Option C: Keep your laptop on
 
@@ -197,31 +208,29 @@ If laptop is always on, leave the server running. Add to startup if needed.
 
 ## Troubleshooting
 
-### "SENDER_EMAIL or SENDER_APP_PASSWORD not configured"
+### "RESEND_API_KEY or RESEND_FROM not configured"
 
 - Check `.env` has both values
 - Restart the server after editing `.env`
 
-### "Authentication unsuccessful" when sending email
+### "Recipient email not configured"
 
-- You're using your regular Gmail password, not an App Password
-- App Password is exactly 16 characters, no spaces
-- Delete old App Password and create a new one
+- Set `RESEND_TO` in `.env`, **or**
+- Set **Recipient Email** on the active profile (Profile page)
+
+### Resend API errors (401 / 403 / validation)
+
+- **401:** API key wrong or revoked — create a new key in the Resend dashboard
+- **403 / domain not verified:** `RESEND_FROM` must use a verified domain, or `onboarding@resend.dev` on free tier
+- **Free-tier recipient restriction:** with `onboarding@resend.dev`, you can usually only send to the email address on your Resend account. Verify a domain (or set `RESEND_TO` to that account email) for testing
 
 ### Email lands in Spam folder
 
 - First email from a new sender often does
+- Prefer a verified custom domain for better deliverability
 - Tell recipient to mark as "Not Spam" once
-- Future emails go to inbox
 
 ### JSearch returns 403 / 429
 
 - Rate limit hit. Free tier = 200/month.
 - Check usage: `http://127.0.0.1:8000/api/jsearch/status`
-- Wait until next month or upgrade RapidAPI plan ($30/mo = 10,000 requests)
-
-### No jobs appearing after "Collect Jobs"
-
-- Check `.env` has `RAPIDAPI_KEY` (otherwise only free sources run)
-- Score threshold is 25 — jobs below are dropped
-- Check server logs for error messages

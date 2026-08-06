@@ -81,7 +81,7 @@ def default_config() -> dict:
             "email_digest_subject_role": "software",
             "email_greeting": "Your Daily Job Digest",
             # Sender address is not a profile setting — it is fixed to
-            # SENDER_EMAIL in .env so it always matches SENDER_APP_PASSWORD.
+            # RESEND_FROM in .env (Resend API). recipient_email overrides RESEND_TO.
             "recipient_email": "",
         },
     }

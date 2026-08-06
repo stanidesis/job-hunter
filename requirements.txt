@@ -11,3 +11,4 @@ rich==13.8.1
 gspread==6.2.1
 google-auth==2.49.2
 PyYAML==6.0.2
+resend>=2.0.0

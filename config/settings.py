@@ -14,10 +14,10 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 HUNTER_API_KEY = os.getenv("HUNTER_API_KEY", "")
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 
-# Email Settings (Gmail SMTP)
-SENDER_EMAIL = os.getenv("SENDER_EMAIL", "")
-SENDER_APP_PASSWORD = os.getenv("SENDER_APP_PASSWORD", "")
-RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL", "parmanandprajapati0009@gmail.com")
+# Email Settings (Resend API)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM = os.getenv("RESEND_FROM", "")
+RESEND_TO = os.getenv("RESEND_TO", "")
 
 # Daily digest scheduler
 DAILY_EMAIL_HOUR = int(os.getenv("DAILY_EMAIL_HOUR", "9"))   # IST hour

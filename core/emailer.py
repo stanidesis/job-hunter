@@ -1,17 +1,13 @@
 """Email digest sender — composes and sends the daily job digest.
 
 Candidate name, greeting, and the role word in the body copy come from the
-active profile's `outreach` section.
+active profile's `outreach` section. Delivery uses the Resend API.
 """
 
-import smtplib
-import ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import Optional
 from config.settings import (
-    SENDER_EMAIL, SENDER_APP_PASSWORD, RECIPIENT_EMAIL, DAILY_JOBS_COUNT,
+    RESEND_API_KEY, RESEND_FROM, RESEND_TO, DAILY_JOBS_COUNT,
 )
 from core.database import (
     get_unemailed_outreach, mark_outreach_emailed, log_email,
@@ -210,20 +206,20 @@ def build_email_text(items: list[dict], candidate_name: str = None,
 
 
 def send_daily_digest(limit: int = None, dry_run: bool = False) -> dict:
-    """Send the daily digest email with top unemailed outreach items."""
+    """Send the daily digest email with top unemailed outreach items via Resend."""
     limit = limit or DAILY_JOBS_COUNT
 
     profile = get_active_profile()
     out_cfg = profile.get("outreach") or {}
-    # Sender is fixed to .env (SENDER_EMAIL) — it must match SENDER_APP_PASSWORD.
-    # Only the recipient can be overridden per profile.
-    sender = SENDER_EMAIL
-    recipient = (out_cfg.get("recipient_email") or "").strip() or RECIPIENT_EMAIL
+    # Sender is fixed to .env (RESEND_FROM). Only the recipient can be
+    # overridden per profile (outreach.recipient_email → RESEND_TO).
+    sender = RESEND_FROM
+    recipient = (out_cfg.get("recipient_email") or "").strip() or RESEND_TO
 
-    if not sender or not SENDER_APP_PASSWORD:
-        return {"error": "SENDER_EMAIL or SENDER_APP_PASSWORD not configured in .env"}
+    if not RESEND_API_KEY or not sender:
+        return {"error": "RESEND_API_KEY or RESEND_FROM not configured in .env"}
     if not recipient:
-        return {"error": "Recipient email not configured (set on profile or RECIPIENT_EMAIL in .env)"}
+        return {"error": "Recipient email not configured (set on profile or RESEND_TO in .env)"}
 
     items = get_unemailed_outreach(limit=limit)
     if not items:
@@ -247,19 +243,16 @@ def send_daily_digest(limit: int = None, dry_run: bool = False) -> dict:
             "preview": [{"title": i["job_title"], "company": i["company"]} for i in items],
         }
 
-    from email.header import Header
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = Header(subject, "utf-8")
-    msg["From"] = sender
-    msg["To"] = recipient
-    msg.attach(MIMEText(text, "plain", "utf-8"))
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
     try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(sender, SENDER_APP_PASSWORD)
-            server.send_message(msg)
+        import resend
+        resend.api_key = RESEND_API_KEY
+        resend.Emails.send({
+            "from": sender,
+            "to": [recipient],
+            "subject": subject,
+            "html": html,
+            "text": text,
+        })
 
         outreach_ids = [i["id"] for i in items]
         mark_outreach_emailed(outreach_ids)

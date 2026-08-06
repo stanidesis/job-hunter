@@ -60,9 +60,9 @@ A profile is one row in the `profiles` table (JSON config), with sections matchi
 
 ### Per-profile email settings
 
-Email digest fields living on the profile: `recipient_email`, `email_greeting`, `email_digest_subject_role`. `recipient_email` **overrides** `RECIPIENT_EMAIL` in `.env`, so different profiles can send to different inboxes.
+Email digest fields living on the profile: `recipient_email`, `email_greeting`, `email_digest_subject_role`. `recipient_email` **overrides** `RESEND_TO` in `.env`, so different profiles can send to different inboxes.
 
-The **sender address is fixed to `SENDER_EMAIL` in `.env`** and is not a profile setting — it has to match `SENDER_APP_PASSWORD`. The Profile page shows it read-only; change it in `.env`.
+The **sender address is fixed to `RESEND_FROM` in `.env`** and is not a profile setting (Resend API key auth lives there too). The Profile page shows it read-only; change it in `.env`.
 
 ### Profile API (summary)
 
@@ -127,13 +127,13 @@ Create a `.env` file in the project root with the following:
 # Free tier: 200 requests/month
 RAPIDAPI_KEY=your_rapidapi_key_here
 
-# ─── Required for Daily Email Digest ───
-# Must use Gmail App Password, NOT your regular password
-# Generate at: https://myaccount.google.com/apppasswords
-# (Requires 2-Step Verification enabled first)
-SENDER_EMAIL=your-gmail@gmail.com
-SENDER_APP_PASSWORD=abcdefghijklmnop
-RECIPIENT_EMAIL=candidate@gmail.com
+# ─── Required for Daily Email Digest (Resend) ───
+# Sign up: https://resend.com → API Keys
+# Free tier: use onboarding@resend.dev as FROM until you verify a domain
+# Docs: https://resend.com/docs/send-with-python
+RESEND_API_KEY=re_xxxxxxxx
+RESEND_FROM=Job Hunter <onboarding@resend.dev>
+RESEND_TO=candidate@example.com
 
 # ─── Daily Digest Timing (IST timezone) ───
 DAILY_EMAIL_HOUR=9                  # 24-hour format (9 = 9:00 AM IST)
@@ -155,9 +155,9 @@ GOOGLE_SHEET_ID=
 | Variable | Required | What happens without it |
 |---|---|---|
 | `RAPIDAPI_KEY` | ⚠️ Strongly recommended | JSearch source won't run; loses ~60 fresh jobs/day |
-| `SENDER_EMAIL` | ✅ Required for email | Daily email won't send (the active profile can override this) |
-| `SENDER_APP_PASSWORD` | ✅ Required for email | Daily email won't send — must match whichever sender the profile uses |
-| `RECIPIENT_EMAIL` | ✅ Required for email | Daily email has no destination (the active profile can override this) |
+| `RESEND_API_KEY` | ✅ Required for email | Daily email won't send; scheduler disabled |
+| `RESEND_FROM` | ✅ Required for email | Daily email won't send; scheduler disabled |
+| `RESEND_TO` | ✅ Required for email | Daily email has no destination (unless set on the active profile) |
 | `DAILY_EMAIL_HOUR` | Optional (defaults to 9) | Email sends at 9 AM IST |
 | `DAILY_JOBS_COUNT` | Optional (defaults to 15) | 15 jobs per email |
 | `HUNTER_API_KEY` | Optional | Currently unused — LinkedIn search URLs replaced Hunter |
@@ -171,12 +171,11 @@ GOOGLE_SHEET_ID=
    - Subscribe to [JSearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) (Free Basic plan)
    - Copy `X-RapidAPI-Key` from dashboard
 
-2. **Gmail App Password** (3 min)
-   - Go to [myaccount.google.com/security](https://myaccount.google.com/security)
-   - Enable **2-Step Verification** (required)
-   - Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-   - App name: `Job Scraper` → Create
-   - Copy the 16-character password (ignore spaces)
+2. **Resend API key** (3 min)
+   - Sign up at [resend.com](https://resend.com)
+   - Create an API key (`re_…`)
+   - Set `RESEND_FROM` to `Job Hunter <onboarding@resend.dev>` (free tier) or a verified domain address
+   - Set `RESEND_TO` to the digest inbox (on free tier with `onboarding@resend.dev`, usually only your Resend account email)
 
 3. **Google Sheets** (optional, 10 min)
    - See [docs/02-setup.md](docs/02-setup.md) for full walkthrough
@@ -191,7 +190,7 @@ See [docs/02-setup.md](docs/02-setup.md) for complete setup instructions.
 - **Frontend:** Vanilla JS, HTML, CSS (no framework) — three pages: Jobs, Outreach, Profile
 - **Config:** YAML presets in `profiles/` for role configurations; runtime config lives in the `profiles` SQLite table
 - **External APIs:** JSearch (RapidAPI), Greenhouse, Lever, Ashby, Remotive, RemoteOK, Arbeitnow
-- **Email:** Gmail SMTP with App Password
+- **Email:** [Resend](https://resend.com) API
 
 ---
 
@@ -203,7 +202,7 @@ Everything free or near-free:
 |---|---|---|
 | JSearch (RapidAPI) | Free 200 calls/month | Aggregated LinkedIn/Indeed/Glassdoor jobs |
 | Greenhouse/Lever/Ashby | Free, unlimited | Company career pages |
-| Gmail SMTP | Free | Sending daily email |
+| Resend | Free tier (3,000 emails/month) | Sending daily email |
 | Server hosting | $0 (local) or ~$5/mo (VPS) | Keep it running 24/7 |
 
 **Total: $0–$5/month**
