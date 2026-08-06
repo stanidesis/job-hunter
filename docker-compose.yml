@@ -1,0 +1,26 @@
+services:
+  app:
+    image: stanidesis/job-hunter:latest
+    build: .
+    ports:
+      # Host access: http://localhost:${PORT:-8000}
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+      DB_PATH: /data/jobs.db
+    volumes:
+      - job-data:/data
+      # Optional Google Sheets credentials:
+      # - ./credentials.json:/app/credentials.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  job-data:

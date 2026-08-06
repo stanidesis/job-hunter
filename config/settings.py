@@ -3,8 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "jobs.db")
+# Database (override with DB_PATH for Docker volume mounts, e.g. /data/jobs.db)
+_DEFAULT_DB = os.path.join(os.path.dirname(os.path.dirname(__file__)), "jobs.db")
+DB_PATH = os.getenv("DB_PATH", _DEFAULT_DB)
 
 # API Keys (optional for test version)
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
@@ -104,6 +105,5 @@ TIMEZONE_INCOMPATIBLE = [
 # Minimum relevance score to show in polished results
 MIN_RELEVANCE_SCORE = 50
 
-# Server
-HOST = "127.0.0.1"
-PORT = 8000
+# Server (local dev only; Docker/CMD sets bind address separately)
+PORT = int(os.getenv("PORT", "8000"))

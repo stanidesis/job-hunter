@@ -1,0 +1,13 @@
+{
+  "name": "job-hunter",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Job discovery and cold outreach system (version source for Docker tags + changelog)",
+  "scripts": {
+    "changeset": "changeset",
+    "version-packages": "changeset version"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.5"
+  }
+}

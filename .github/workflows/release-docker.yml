@@ -1,0 +1,131 @@
+name: Release Docker Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: stanidesis/job-hunter
+
+jobs:
+  gate:
+    name: Should release?
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Decide whether to build and push
+        id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # Manual runs always publish
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — releasing"
+            exit 0
+          fi
+
+          subject=$(printf '%s\n' "${COMMIT_MSG:-}" | head -n1 | tr -d '\r')
+          echo "Commit subject: $subject"
+
+          is_chore=false
+          # Conventional commit: chore: or chore(scope):
+          if printf '%s' "$subject" | grep -Eqi '^chore(\([^)]*\))?:'; then
+            is_chore=true
+          fi
+
+          # Version Packages merges must still publish so semver tags update
+          if printf '%s' "$subject" | grep -Eqi '^chore: version packages'; then
+            is_chore=false
+            echo "Version packages commit — releasing"
+          fi
+
+          # Also inspect associated PR title / labels when available
+          sha="${{ github.sha }}"
+          pr_json=$(gh api "repos/${{ github.repository }}/commits/${sha}/pulls" \
+            -H "Accept: application/vnd.github.groot-preview+json" 2>/dev/null || echo "[]")
+
+          pr_title=$(echo "$pr_json" | jq -r '.[0].title // empty' 2>/dev/null || true)
+          pr_labels=$(echo "$pr_json" | jq -r '.[0].labels[].name // empty' 2>/dev/null || true)
+
+          if [ -n "$pr_title" ]; then
+            echo "Associated PR title: $pr_title"
+            if printf '%s' "$pr_title" | grep -Eqi '^chore(\([^)]*\))?:'; then
+              if ! printf '%s' "$pr_title" | grep -Eqi '^chore: version packages'; then
+                is_chore=true
+              fi
+            fi
+          fi
+
+          if echo "$pr_labels" | grep -Eqi '^chore$'; then
+            # Label chore skips unless this is a version packages release
+            if ! printf '%s' "$subject" | grep -Eqi '^chore: version packages' \
+              && ! printf '%s' "$pr_title" | grep -Eqi '^chore: version packages'; then
+              is_chore=true
+              echo "PR has chore label — skipping"
+            fi
+          fi
+
+          if [ "$is_chore" = true ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "Chore commit/PR — skipping Docker release"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Non-chore change — releasing"
+          fi
+
+  build-and-push:
+    name: Build and push
+    needs: gate
+    if: needs.gate.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read package version
+        id: version
+        run: |
+          ver=$(jq -r .version package.json)
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "Package version: $ver"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

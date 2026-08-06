@@ -111,6 +111,16 @@ Not needed manually — the database auto-initializes when you start the server.
 
 ## Step 5: Start the Server
 
+### Option A: Docker Compose (recommended)
+
+```bash
+docker compose up --build -d
+```
+
+SQLite is stored in a Docker volume (`job-data` → `/data/jobs.db` inside the container), so data survives restarts.
+
+### Option B: Local Python
+
 ```bash
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
@@ -130,7 +140,7 @@ RESEND_API_KEY or RESEND_FROM not set in .env — daily digest disabled
 
 ## Step 6: Open Dashboard
 
-Open browser: **http://127.0.0.1:8000**
+Open browser: **http://localhost:8000**
 
 You'll see the Jobs page with 0 jobs.
 
@@ -146,7 +156,7 @@ Wait 1-2 minutes. You should see ~500-1000 new jobs appear.
 
 ## Step 8: Generate Outreach
 
-Navigate to **http://127.0.0.1:8000/outreach**
+Navigate to **http://localhost:8000/outreach**
 
 Click **"Find Contacts for Top Jobs"**. You'll see 15 outreach cards created.
 
@@ -175,20 +185,25 @@ From now on, the system auto-runs every day at 9:00 AM IST:
 
 To keep the daily schedule active, run on a VPS instead of your laptop.
 
-### Option A: DigitalOcean / Hetzner VPS (~$5/mo)
+### Option A: Docker Compose on a VPS (~$5/mo)
 
 ```bash
-# On the VPS
-git clone <your-repo> job-scraper
-cd job-scraper
-pip install -r requirements.txt
+git clone <your-repo> job-hunter
+cd job-hunter
 cp .env.example .env
 # Edit .env with your keys
 
-# Run as a systemd service
-sudo cp deploy/job-scraper.service /etc/systemd/system/
-sudo systemctl enable --now job-scraper
+# Either build locally...
+docker compose up --build -d
+
+# ...or pull the published image from Docker Hub
+docker compose pull
+docker compose up -d
 ```
+
+Image: **`stanidesis/job-hunter`** (`latest`, `sha-*`, and semver tags).
+
+Open **http://localhost:8000** on the VPS (or put a reverse proxy in front).
 
 ### Option B: Railway / Render (free tier)
 
@@ -202,7 +217,7 @@ Add env vars in their dashboard (`RESEND_API_KEY`, `RESEND_FROM`, `RESEND_TO`, e
 
 ### Option C: Keep your laptop on
 
-If laptop is always on, leave the server running. Add to startup if needed.
+If laptop is always on, leave the server running (`docker compose up -d` or local uvicorn).
 
 ---
 

@@ -27,7 +27,7 @@ from core.profile import (
     update_active_profile_query, delete_active_profile_query,
 )
 from config.settings import (
-    HOST, PORT, GOOGLE_SHEETS_CREDS, GOOGLE_SHEET_ID, HUNTER_API_KEY,
+    PORT, GOOGLE_SHEETS_CREDS, GOOGLE_SHEET_ID, HUNTER_API_KEY,
     DAILY_EMAIL_HOUR, DAILY_EMAIL_TIMEZONE, RESEND_API_KEY, RESEND_FROM, RESEND_TO,
 )
 
@@ -682,6 +682,13 @@ async def api_rescore_all(
     return {"ok": True, "scanned": len(rows), "updated": updated, "deleted": deleted}
 
 
+# ── Health ─────────────────────────────────────────────────────
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 # ── UI Routes ──────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -700,5 +707,6 @@ async def profile_page(request: Request):
 
 
 if __name__ == "__main__":
-    print(f"Starting Job Scraper at http://{HOST}:{PORT}")
-    uvicorn.run("main:app", host=HOST, port=PORT, reload=True)
+    # Local dev only: bind loopback; open http://localhost:{PORT}
+    print(f"Starting Job Scraper at http://localhost:{PORT}")
+    uvicorn.run("main:app", host="127.0.0.1", port=PORT, reload=True)

@@ -101,6 +101,29 @@ On first run, if no profile exists, the system seeds a `Backend Python (legacy)`
 
 ## Quick Start
 
+### Docker Compose (recommended)
+
+```bash
+# 1. Copy env template and fill in API keys
+cp .env.example .env
+# Edit .env (RAPIDAPI_KEY, RESEND_*, etc.)
+
+# 2. Build and run
+docker compose up --build -d
+
+# 3. Open http://localhost:8000
+```
+
+Pull a published image instead of building:
+
+```bash
+docker compose pull
+docker compose up -d
+# still needs a local .env; image is stanidesis/job-hunter:latest
+```
+
+### Local Python
+
 ```bash
 # 1. Install Python deps
 pip install -r requirements.txt
@@ -112,7 +135,7 @@ cp .env.example .env
 # 3. Run the server
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 
-# 4. Open http://127.0.0.1:8000 in browser
+# 4. Open http://localhost:8000 in browser
 ```
 
 ---
@@ -138,6 +161,10 @@ RESEND_TO=candidate@example.com
 # ─── Daily Digest Timing (IST timezone) ───
 DAILY_EMAIL_HOUR=9                  # 24-hour format (9 = 9:00 AM IST)
 DAILY_JOBS_COUNT=15                 # Number of jobs per email
+
+# ─── Server ───
+PORT=8000                           # Open the app at http://localhost:PORT
+# DB_PATH=jobs.db                   # Optional; Docker Compose uses /data/jobs.db
 
 # ─── Optional: Hunter.io (not actively used — LinkedIn search replaces it) ───
 # Sign up: https://hunter.io
@@ -184,13 +211,50 @@ See [docs/02-setup.md](docs/02-setup.md) for complete setup instructions.
 
 ---
 
+## Docker image & releases
+
+Published image: **`stanidesis/job-hunter`** on Docker Hub.
+
+| Tag | Meaning |
+|-----|---------|
+| `latest` | Latest non-chore build from `main` |
+| `sha-<short>` | Git commit short SHA |
+| `2.x.y` / `2.x` | Semver from `package.json` (managed by Changesets) |
+
+**Release workflow** (`.github/workflows/release-docker.yml`) runs on:
+
+- Manual **workflow_dispatch**
+- Push to `main` when the commit/PR is **not** a conventional `chore:` (and not labeled `chore`)
+- Exception: `chore: version packages` (Changesets version PR) **does** publish so semver tags update
+
+**GitHub secrets required** for the workflow:
+
+| Secret | Purpose |
+|--------|---------|
+| `DOCKERHUB_USERNAME` | Docker Hub username |
+| `DOCKERHUB_TOKEN` | Docker Hub access token with push access |
+
+### Versioning (Changesets)
+
+User-facing changes should include a changeset:
+
+```bash
+npm install          # once
+npm run changeset    # patch | minor | major + summary
+```
+
+On `main`, the Changesets action opens a **Version Packages** PR. Merging it bumps `package.json`, updates `CHANGELOG.md`, and triggers a Docker publish with the new version tag.
+
+---
+
 ## Tech Stack
 
-- **Backend:** Python 3.13, FastAPI, SQLite, APScheduler
+- **Backend:** Python 3.12+ (Docker), FastAPI, SQLite, APScheduler
 - **Frontend:** Vanilla JS, HTML, CSS (no framework) — three pages: Jobs, Outreach, Profile
 - **Config:** YAML presets in `profiles/` for role configurations; runtime config lives in the `profiles` SQLite table
 - **External APIs:** JSearch (RapidAPI), Greenhouse, Lever, Ashby, Remotive, RemoteOK, Arbeitnow
 - **Email:** [Resend](https://resend.com) API
+- **Deploy:** Docker / Docker Compose; image on Docker Hub
 
 ---
 
