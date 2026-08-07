@@ -67,4 +67,35 @@ _Add a brief overview of your project architecture_
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+### Git: never work on `main`
+
+- **Do not** commit or push product work on `main`
+- Before implementing, check `git branch --show-current`
+- If not already on a branch for this work, create one from up-to-date `main`
+- Branch name **must include the Bead issue ID(s)** being worked:
+
+```bash
+git fetch origin
+git checkout -b <bead-id>-short-description origin/main
+# e.g. job-hunter-21r-strict-location-filters
+# multi-issue: job-hunter-1jl-job-hunter-uo5-boards-and-location
+```
+
+- Claim the issue: `bd update <id> --claim`
+- Push the feature branch (not `main`); open a PR to merge
+
+### Changesets: required on meaningful commits
+
+Any commit with a **meaningful** change (features, fixes, behavior, API, user-facing docs, Docker/runtime) **must** add a changeset under `.changeset/`.
+
+Agents must create the file **non-interactively** (do not use interactive `npm run changeset`):
+
+```markdown
+---
+"job-hunter": patch
+---
+
+Short summary for the changelog
+```
+
+Use `patch` / `minor` / `major` as appropriate. Stage the `.changeset/*.md` with the same commit as the change. See `AGENTS.md` and `.changeset/README.md` for full rules.
