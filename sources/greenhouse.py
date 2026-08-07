@@ -35,7 +35,7 @@ class GreenhouseSource(BaseSource):
             job = Job(
                 title=item.get("title", ""),
                 company=self.company["name"],
-                location=location or "Remote",
+                location=location or "Unknown",
                 description=item.get("content", ""),
                 url=item.get("absolute_url", ""),
                 source=f"greenhouse:{self.slug}",

@@ -19,7 +19,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
             company TEXT NOT NULL,
-            location TEXT DEFAULT 'Remote',
+            location TEXT DEFAULT 'Unknown',
             description TEXT DEFAULT '',
             url TEXT DEFAULT '',
             source TEXT DEFAULT '',

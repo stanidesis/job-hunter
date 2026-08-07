@@ -50,7 +50,7 @@ class HTMLCareerSource(BaseSource):
             job = Job(
                 title=text,
                 company=self.company["name"],
-                location="Remote",
+                location="Unknown",
                 description="",
                 url=full_url,
                 source=f"html:{self.company.get('id', '')}",

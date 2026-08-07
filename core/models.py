@@ -8,7 +8,7 @@ import re
 class Job(BaseModel):
     title: str
     company: str
-    location: str = "Remote"
+    location: str = "Unknown"
     description: str = ""
     url: str = ""
     source: str = ""

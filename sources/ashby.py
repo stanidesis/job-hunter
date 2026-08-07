@@ -41,7 +41,7 @@ class AshbySource(BaseSource):
             job = Job(
                 title=item.get("title", ""),
                 company=self.company["name"],
-                location=location or "Remote",
+                location=location or "Unknown",
                 description=item.get("descriptionHtml", "") or item.get("descriptionPlain", ""),
                 url=item.get("externalLink", "") or item.get("jobUrl", ""),
                 source=f"ashby:{self.slug}",

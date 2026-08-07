@@ -42,7 +42,7 @@ class LeverSource(BaseSource):
             job = Job(
                 title=item.get("text", ""),
                 company=self.company["name"],
-                location=location or "Remote",
+                location=location or "Unknown",
                 description=item.get("descriptionPlain", "") or item.get("description", ""),
                 url=item.get("hostedUrl", ""),
                 source=f"lever:{self.slug}",

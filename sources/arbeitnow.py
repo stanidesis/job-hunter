@@ -32,7 +32,7 @@ class ArbeitnowSource(BaseSource):
             job = Job(
                 title=item.get("title", ""),
                 company=item.get("company_name", ""),
-                location=item.get("location", "Remote"),
+                location=item.get("location") or "Unknown",
                 description=item.get("description", ""),
                 url=item.get("url", ""),
                 source=self.name,

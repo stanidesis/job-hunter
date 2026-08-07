@@ -57,9 +57,11 @@ class JSearchSource(BaseSource):
             item.get("job_state", ""),
             item.get("job_country", ""),
         ]
-        location = ", ".join(p for p in location_parts if p) or "Remote"
+        parts = [p for p in location_parts if p]
+        location = ", ".join(parts) or "Unknown"
         if item.get("job_is_remote"):
-            location = "Remote" if not location_parts[0] else f"Remote / {location}"
+            # Remote flag is explicit; keep Remote label even with no city.
+            location = "Remote" if not parts else f"Remote / {', '.join(parts)}"
 
         salary = ""
         if item.get("job_min_salary") and item.get("job_max_salary"):

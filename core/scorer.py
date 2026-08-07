@@ -72,6 +72,8 @@ def detect_work_type(location: str = "", description: str = "",
     """Detect work arrangement: remote | hybrid | onsite | unknown.
 
     Priority: hybrid > remote > onsite (hybrid phrases often also say remote).
+    Bare city/region strings with no remote/hybrid language are treated as
+    onsite — typical for ATS postings like "San Francisco, CA".
     """
     full = f"{title} {location} {description}".lower()
     if any(kw in full for kw in _HYBRID_KW):
@@ -80,10 +82,15 @@ def detect_work_type(location: str = "", description: str = "",
         return "remote"
     if any(kw in full for kw in _ONSITE_KW):
         return "onsite"
-    # Bare location string often just says "Remote"
     loc = (location or "").lower().strip()
+    if not loc or loc in ("unknown", "n/a", "na", "tbd", "-", "none"):
+        return "unknown"
+    # Bare location string often just says "Remote"
     if loc in ("remote", "anywhere", "worldwide", "global"):
         return "remote"
+    # Meaningful place with no remote/hybrid signal → typically office-based
+    if len(loc) >= 2:
+        return "onsite"
     return "unknown"
 
 
