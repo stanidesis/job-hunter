@@ -20,15 +20,16 @@ from core.collector import run_collection, run_company_crawl
 from core.sheets import export_to_sheet
 from core.emailer import run_daily_pipeline, send_daily_digest, generate_outreach_for_top_jobs
 from core.profile import (
-    get_active_profile, list_profiles, get_profile, create_profile,
-    update_profile, activate_profile, delete_profile, duplicate_profile,
-    import_preset, export_profile, list_presets,
+    get_active_profile, get_email_schedule, list_profiles, get_profile,
+    create_profile, update_profile, activate_profile, delete_profile,
+    duplicate_profile, import_preset, export_profile, list_presets,
     get_active_profile_queries, add_active_profile_query,
     update_active_profile_query, delete_active_profile_query,
 )
 from config.settings import (
     PORT, GOOGLE_SHEETS_CREDS, GOOGLE_SHEET_ID, HUNTER_API_KEY,
-    DAILY_EMAIL_HOUR, DAILY_EMAIL_TIMEZONE, RESEND_API_KEY, RESEND_FROM, RESEND_TO,
+    DAILY_EMAIL_HOUR, DAILY_EMAIL_MINUTE, DAILY_EMAIL_TIMEZONE,
+    RESEND_API_KEY, RESEND_FROM, RESEND_TO,
 )
 
 app = FastAPI(title="Job Scraper", version="2.0.0")
@@ -36,25 +37,46 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-scheduler = AsyncIOScheduler(timezone=DAILY_EMAIL_TIMEZONE)
+scheduler = AsyncIOScheduler()
+
+
+def reschedule_daily_digest() -> dict:
+    """(Re)schedule the daily digest from the active profile's email settings."""
+    sched = get_email_schedule()
+    hour = sched["hour"]
+    minute = sched["minute"]
+    tz = sched["timezone"]
+
+    if not (RESEND_API_KEY and RESEND_FROM):
+        return {"enabled": False, "reason": "RESEND not configured"}
+
+    try:
+        trigger = CronTrigger(hour=hour, minute=minute, timezone=tz)
+    except Exception as e:
+        # Fall back to env defaults if profile TZ is invalid
+        print(f"Invalid email schedule timezone {tz!r}: {e}; using env defaults", flush=True)
+        hour, minute, tz = DAILY_EMAIL_HOUR, DAILY_EMAIL_MINUTE, DAILY_EMAIL_TIMEZONE
+        trigger = CronTrigger(hour=hour, minute=minute, timezone=tz)
+
+    if not scheduler.running:
+        scheduler.start()
+
+    scheduler.add_job(
+        run_daily_pipeline,
+        trigger,
+        id="daily_digest",
+        replace_existing=True,
+        kwargs={"send": True},
+    )
+    print(f"Scheduled daily digest at {hour:02d}:{minute:02d} {tz}", flush=True)
+    return {"enabled": True, "hour": hour, "minute": minute, "timezone": tz}
 
 
 @app.on_event("startup")
 async def startup():
     init_db()
-
-    # Schedule daily digest at configured hour IST. Requires Resend config
-    # (RESEND_API_KEY + RESEND_FROM). Recipient can still come from profile.
     if RESEND_API_KEY and RESEND_FROM:
-        scheduler.add_job(
-            run_daily_pipeline,
-            CronTrigger(hour=DAILY_EMAIL_HOUR, minute=0),
-            id="daily_digest",
-            replace_existing=True,
-            kwargs={"send": True},
-        )
-        scheduler.start()
-        print(f"Scheduled daily digest at {DAILY_EMAIL_HOUR}:00 IST", flush=True)
+        reschedule_daily_digest()
     else:
         print("RESEND_API_KEY or RESEND_FROM not set in .env — daily digest disabled", flush=True)
 
@@ -74,16 +96,18 @@ async def api_get_jobs(
     min_score: int = Query(0, ge=0, le=100),
     search: Optional[str] = None,
     location: Optional[str] = None,
-    tech: Optional[str] = None,
-    india_friendly: Optional[str] = None,
+    skills: Optional[str] = None,
+    location_fit: Optional[str] = None,
+    work_type: Optional[str] = None,
     company_domain: Optional[str] = None,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
     jobs = get_jobs(
         source=source, status=status, min_score=min_score,
-        search=search, location=location, tech=tech,
-        india_friendly=india_friendly, company_domain=company_domain,
+        search=search, location=location, skills=skills,
+        location_fit=location_fit, work_type=work_type,
+        company_domain=company_domain,
         limit=limit, offset=offset,
     )
     return {"jobs": jobs, "count": len(jobs)}
@@ -131,15 +155,13 @@ async def api_collect(generate_outreach: bool = Query(True)):
 async def api_get_companies(
     ats_platform: Optional[str] = None,
     crawl_status: Optional[str] = None,
-    india_friendly: Optional[str] = None,
     search: Optional[str] = None,
     limit: int = Query(200, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
     companies = get_companies(
         ats_platform=ats_platform, crawl_status=crawl_status,
-        india_friendly=india_friendly, search=search,
-        limit=limit, offset=offset,
+        search=search, limit=limit, offset=offset,
     )
     return {"companies": companies, "count": len(companies)}
 
@@ -153,7 +175,6 @@ class CompanyInput(BaseModel):
     founded_year: int = 0
     employee_count: str = ""
     tags: str = ""
-    india_friendly: str = "unknown"
     notes: str = ""
 
 
@@ -212,7 +233,7 @@ async def api_seed_companies():
 
 @app.post("/api/companies/mega-seed")
 async def api_mega_seed():
-    """Load 250+ Indian + MNC + Global remote companies."""
+    """Load curated global / remote-friendly company list."""
     from core.mega_companies import get_all_mega_companies
     companies = get_all_mega_companies()
     added = 0
@@ -261,10 +282,11 @@ async def api_discover_companies(
 @app.post("/api/export/sheets")
 async def api_export_sheets(
     min_score: int = Query(0, ge=0, le=100),
-    india_friendly: Optional[str] = None,
+    location_fit: Optional[str] = None,
+    work_type: Optional[str] = None,
     source: Optional[str] = None,
     search: Optional[str] = None,
-    tech: Optional[str] = None,
+    skills: Optional[str] = None,
     mode: str = Query("replace"),
     sheet_name: str = Query("Jobs"),
 ):
@@ -278,8 +300,8 @@ async def api_export_sheets(
     try:
         result = export_to_sheet(
             creds_file=creds, spreadsheet_id=sheet_id, sheet_name=sheet_name,
-            min_score=min_score, india_friendly=india_friendly,
-            source=source, search=search, tech=tech, mode=mode,
+            min_score=min_score, location_fit=location_fit, work_type=work_type,
+            source=source, search=search, skills=skills, mode=mode,
         )
         return result
     except Exception as e:
@@ -352,12 +374,14 @@ async def api_outreach_refresh(limit: int = Query(15, ge=1, le=50),
 async def api_generate_outreach(
     min_score: int = Query(40, ge=0, le=100),
     limit: int = Query(15, ge=1, le=50),
-    india_friendly: Optional[str] = "maybe",
+    location_fit: Optional[str] = "maybe",
+    work_type: Optional[str] = None,
 ):
     """For top N high-scoring jobs without existing outreach,
     build LinkedIn search URLs + generate DMs. No API credits used."""
     generated = generate_outreach_for_top_jobs(
-        limit=limit, min_score=min_score, india_friendly=india_friendly,
+        limit=limit, min_score=min_score, location_fit=location_fit,
+        work_type=work_type,
     )
     if generated == 0:
         return {"generated": 0, "message": "No new jobs eligible for outreach"}
@@ -386,7 +410,7 @@ async def api_get_queries():
 
 class QueryInput(BaseModel):
     query: str
-    country: str = "IN"
+    country: str = "us"
     date_posted: str = "3days"
     remote_jobs_only: bool = False
 
@@ -464,6 +488,7 @@ async def api_email_status():
     out_cfg = get_active_profile().get("outreach") or {}
     profile_recipient = (out_cfg.get("recipient_email") or "").strip()
     effective_recipient = profile_recipient or RESEND_TO
+    sched = get_email_schedule()
     return {
         "provider": "resend",
         "sender_configured": bool(RESEND_API_KEY) and bool(RESEND_FROM),
@@ -472,8 +497,9 @@ async def api_email_status():
         "recipient": effective_recipient,
         "recipient_source": "profile" if profile_recipient else ("env" if RESEND_TO else "none"),
         "candidate_name": out_cfg.get("candidate_name") or "",
-        "scheduled_hour": DAILY_EMAIL_HOUR,
-        "timezone": DAILY_EMAIL_TIMEZONE,
+        "scheduled_hour": sched["hour"],
+        "scheduled_minute": sched["minute"],
+        "timezone": sched["timezone"],
         "recent_sends": logs,
     }
 
@@ -564,7 +590,12 @@ async def api_update_profile(pid: int, body: ProfileInput):
         raise HTTPException(status_code=404, detail="Profile not found")
     update_profile(pid, config=body.config, name=body.name,
                    description=body.description)
-    return {"ok": True}
+    # If this is the active profile, refresh the digest schedule
+    active = get_active_profile()
+    schedule = None
+    if active.get("_id") == pid and RESEND_API_KEY and RESEND_FROM:
+        schedule = reschedule_daily_digest()
+    return {"ok": True, "email_schedule": schedule}
 
 
 @app.post("/api/profiles/{pid}/activate")
@@ -575,7 +606,8 @@ async def api_activate_profile(pid: int):
         raise HTTPException(status_code=404, detail=str(e))
     # Queries now live on the profile itself — no separate seeding needed.
     queries_count = len((get_profile(pid) or {}).get("config", {}).get("search", {}).get("jsearch_default_queries") or [])
-    return {"ok": True, "active": pid, "queries": queries_count}
+    schedule = reschedule_daily_digest() if (RESEND_API_KEY and RESEND_FROM) else {"enabled": False}
+    return {"ok": True, "active": pid, "queries": queries_count, "email_schedule": schedule}
 
 
 @app.post("/api/profiles/{pid}/duplicate")
@@ -660,19 +692,19 @@ async def api_rescore_all(
                 deleted += 1
                 continue
 
-            existing_tech = set(
+            existing_skills = set(
                 t.strip() for t in (r["tech_stack"] or "").split(",") if t.strip()
             )
-            existing_tech.update(result["tech_stack"])
-            tech_stack = ", ".join(sorted(existing_tech))
+            existing_skills.update(result["matched_skills"])
+            tech_stack = ", ".join(sorted(existing_skills))
 
             conn.execute(
                 "UPDATE jobs SET relevance_score = ?, experience_level = ?, "
-                "india_friendly = ?, location_note = ?, tech_stack = ?, "
+                "location_fit = ?, location_note = ?, work_type = ?, tech_stack = ?, "
                 "scored_profile_id = ? WHERE id = ?",
                 (result["score"], result["experience_level"],
-                 result["india_friendly"], result["location_note"],
-                 tech_stack, profile_id, r["id"]),
+                 result["location_fit"], result["location_note"],
+                 result["work_type"], tech_stack, profile_id, r["id"]),
             )
             updated += 1
         conn.commit()

@@ -123,7 +123,10 @@ async function loadEmailStatus() {
         el.textContent = '📧 Recipient not set';
         el.style.color = 'var(--red)';
     } else {
-        el.textContent = `📧 Daily ${s.scheduled_hour}:00 IST · ${s.sender} → ${s.recipient}`;
+        const hh = String(s.scheduled_hour ?? 9).padStart(2, '0');
+        const mm = String(s.scheduled_minute ?? 0).padStart(2, '0');
+        const tz = s.timezone || 'UTC';
+        el.textContent = `📧 Daily ${hh}:${mm} ${tz} · ${s.sender} → ${s.recipient}`;
         el.style.color = 'var(--text-muted)';
     }
 }
@@ -213,7 +216,7 @@ async function syncOutreach() {
     const original = btn.innerHTML;
     btn.textContent = 'Syncing…';
     try {
-        const data = await api('/outreach/generate?min_score=40&limit=15&india_friendly=maybe', { method: 'POST' });
+        const data = await api('/outreach/generate?min_score=40&limit=15&location_fit=maybe', { method: 'POST' });
         if (data.error) {
             showToast(data.error);
         } else if (data.generated === 0) {

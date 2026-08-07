@@ -43,9 +43,10 @@ def _render_card(i: int, item: dict) -> str:
     location = _escape(item.get("location", ""))
     salary = _escape(item.get("salary", ""))
     posted = _format_date(item.get("posted_date", ""))
-    tech = _escape((item.get("tech_stack") or "")[:100])
+    skills = _escape((item.get("tech_stack") or "")[:100])
     score = item.get("relevance_score", 0)
-    india = item.get("india_friendly", "unknown")
+    loc_fit = item.get("location_fit", "unknown")
+    work_type = item.get("work_type", "unknown")
 
     job_url = item.get("job_url") or "#"
     dm_short = _escape(item.get("dm_short", ""))
@@ -59,7 +60,13 @@ def _render_card(i: int, item: dict) -> str:
     if not searches:
         searches = [{"label": "Search", "url": item.get("contact_linkedin", "#")}]
 
-    india_color = {"yes": "#00b894", "maybe": "#fdcb6e", "no": "#e17055"}.get(india, "#8b8fa3")
+    fit_color = {"yes": "#00b894", "maybe": "#fdcb6e", "no": "#e17055"}.get(loc_fit, "#8b8fa3")
+    wt_label = {"remote": "Remote", "hybrid": "Hybrid", "onsite": "On-site"}.get(
+        (work_type or "").lower(), work_type or "—"
+    )
+    fit_label = {"yes": "Location ✓", "maybe": "Location ~", "no": "Location ✗"}.get(
+        loc_fit, loc_fit
+    )
 
     # Group searches by category for nicer layout
     colors = {"engineering": "#0a66c2", "executive": "#6c5ce7", "hr": "#00b894"}
@@ -93,14 +100,15 @@ def _render_card(i: int, item: dict) -> str:
                 <td style="font-size:11px;color:#6b7280;letter-spacing:0.5px;text-transform:uppercase;">#{i}</td>
                 <td align="right">
                     <span style="background:#6c5ce7;color:white;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Score {score}</span>
-                    <span style="background:{india_color}22;color:{india_color};border:1px solid {india_color};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-left:4px;">{_escape(india).upper()}</span>
+                    <span style="background:{fit_color}22;color:{fit_color};border:1px solid {fit_color};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-left:4px;">{_escape(fit_label)}</span>
+                    <span style="background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-left:4px;">{_escape(wt_label)}</span>
                 </td>
             </tr></table>
             <div style="font-size:18px;font-weight:700;color:#111827;margin-top:8px;">{title}</div>
             <div style="font-size:14px;color:#6b7280;margin-top:2px;">{company} &middot; {location}</div>
             {f'<div style="font-size:12px;color:#6b7280;margin-top:4px;">{salary}</div>' if salary else ''}
             {f'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">Posted: {posted}</div>' if posted else ''}
-            {f'<div style="font-size:11px;color:#9ca3af;margin-top:4px;">Tech: {tech}</div>' if tech else ''}
+            {f'<div style="font-size:11px;color:#9ca3af;margin-top:4px;">Skills: {skills}</div>' if skills else ''}
         </td></tr>
 
         <tr><td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
@@ -268,7 +276,8 @@ def send_daily_digest(limit: int = None, dry_run: bool = False) -> dict:
 
 
 def generate_outreach_for_top_jobs(limit: int = 15, min_score: int = 40,
-                                   india_friendly: str = "maybe",
+                                   location_fit: str = "maybe",
+                                   work_type: str = None,
                                    seen_after: Optional[str] = None) -> int:
     """Create outreach items for the highest-scoring jobs that don't have one yet.
     If `seen_after` is given, only jobs refreshed at/after that timestamp qualify —
@@ -285,8 +294,9 @@ def generate_outreach_for_top_jobs(limit: int = 15, min_score: int = 40,
     profile = get_active_profile()
     profile_id = profile.get("_id")
 
-    top_jobs = get_jobs(min_score=min_score, india_friendly=india_friendly,
-                         seen_after=seen_after, limit=limit * 5)
+    top_jobs = get_jobs(min_score=min_score, location_fit=location_fit,
+                         work_type=work_type, seen_after=seen_after,
+                         limit=limit * 5)
     candidates = [j for j in top_jobs if not outreach_exists_for_job(j["id"])][:limit]
 
     # All items in this run share the same timestamp so batch filtering is

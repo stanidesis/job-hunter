@@ -123,10 +123,16 @@ function renderEditor() {
     document.getElementById('min-score-to-store').value = sc.min_score_to_store ?? 25;
     const w = sc.weights || {};
     document.getElementById('w-title').value = w.title ?? 35;
-    document.getElementById('w-tech').value = w.tech ?? 35;
+    document.getElementById('w-skills').value = w.skills ?? 35;
     document.getElementById('w-experience').value = w.experience ?? 15;
     document.getElementById('w-signal').value = w.signal ?? 15;
     updateWeightsTotal();
+
+    // Location work types
+    const preferredWt = new Set((state.config.location?.work_types || []).map(x => String(x).toLowerCase()));
+    document.querySelectorAll('.work-type-cb').forEach(cb => {
+        cb.checked = preferredWt.has(cb.value);
+    });
 
     // Outreach scalars
     const o = state.config.outreach || {};
@@ -134,6 +140,9 @@ function renderEditor() {
     document.getElementById('email-role-word').value = o.email_digest_subject_role || '';
     document.getElementById('email-greeting').value = o.email_greeting || '';
     document.getElementById('recipient-email').value = o.recipient_email || '';
+    document.getElementById('email-hour').value = o.email_hour ?? 9;
+    document.getElementById('email-minute').value = o.email_minute ?? 0;
+    document.getElementById('email-timezone').value = o.email_timezone || 'UTC';
     document.getElementById('bio-short').value = o.bio_short || '';
     document.getElementById('achievements').value = (o.achievements || []).join('\n');
     document.getElementById('dm-short').value = o.dm_short_template || '';
@@ -205,8 +214,8 @@ function jsearchRow(q = {}) {
     div.innerHTML = `
         <input class="q-query" placeholder="query text" value="${escapeAttr(q.query || '')}">
         <select class="q-country">
-            ${['IN','US','GB','CA','DE','SG'].map(c =>
-                `<option value="${c}" ${q.country === c ? 'selected' : ''}>${c}</option>`).join('')}
+            ${['us','gb','ca','de','au','sg','in','nl'].map(c =>
+                `<option value="${c}" ${(q.country || 'us').toLowerCase() === c ? 'selected' : ''}>${c.toUpperCase()}</option>`).join('')}
         </select>
         <select class="q-date">
             ${['today','3days','week','month','all'].map(d =>
@@ -283,16 +292,25 @@ function buildConfigFromForm() {
     cfg.scoring.min_score_to_store = parseInt(document.getElementById('min-score-to-store').value || 25, 10);
     cfg.scoring.weights = {
         title: parseInt(document.getElementById('w-title').value || 0, 10),
-        tech: parseInt(document.getElementById('w-tech').value || 0, 10),
+        skills: parseInt(document.getElementById('w-skills').value || 0, 10),
         experience: parseInt(document.getElementById('w-experience').value || 0, 10),
         signal: parseInt(document.getElementById('w-signal').value || 0, 10),
     };
+
+    // Location work types
+    cfg.location = cfg.location || {};
+    cfg.location.work_types = Array.from(document.querySelectorAll('.work-type-cb'))
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
 
     // Outreach scalars
     cfg.outreach.candidate_name = document.getElementById('candidate-name').value;
     cfg.outreach.email_digest_subject_role = document.getElementById('email-role-word').value;
     cfg.outreach.email_greeting = document.getElementById('email-greeting').value;
     cfg.outreach.recipient_email = document.getElementById('recipient-email').value.trim();
+    cfg.outreach.email_hour = parseInt(document.getElementById('email-hour').value || 9, 10);
+    cfg.outreach.email_minute = parseInt(document.getElementById('email-minute').value || 0, 10);
+    cfg.outreach.email_timezone = (document.getElementById('email-timezone').value || 'UTC').trim();
     cfg.outreach.bio_short = document.getElementById('bio-short').value;
     cfg.outreach.achievements = document.getElementById('achievements').value
         .split('\n').map(s => s.trim()).filter(Boolean);
@@ -419,13 +437,13 @@ function switchTab(name) {
 }
 
 function updateWeightsTotal() {
-    const total = ['w-title', 'w-tech', 'w-experience', 'w-signal']
+    const total = ['w-title', 'w-skills', 'w-experience', 'w-signal']
         .reduce((acc, id) => acc + (parseInt(document.getElementById(id).value || 0, 10) || 0), 0);
     const el = document.getElementById('weights-total');
     el.textContent = `Total: ${total}${total === 100 ? '' : ' (should be 100)'}`;
     el.style.color = total === 100 ? 'var(--text-muted)' : 'var(--yellow)';
 }
-['w-title','w-tech','w-experience','w-signal'].forEach(id =>
+['w-title','w-skills','w-experience','w-signal'].forEach(id =>
     document.addEventListener('input', e => {
         if (e.target && e.target.id === id) updateWeightsTotal();
     })

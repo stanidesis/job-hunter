@@ -14,15 +14,16 @@ class Job(BaseModel):
     source: str = ""
     posted_date: Optional[str] = None
     discovered_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    tech_stack: str = ""  # comma-separated
+    tech_stack: str = ""  # comma-separated matched skills (column name historical)
     experience_level: str = ""  # junior/mid/senior
     relevance_score: int = 0
     status: str = "new"  # new/reviewed/applied/stale
     company_domain: str = ""
     salary: str = ""
     job_type: str = ""  # full-time/part-time/contract
-    india_friendly: str = "unknown"  # yes/no/maybe/unknown
+    location_fit: str = "unknown"  # yes/no/maybe/unknown
     location_note: str = ""  # explanation of location check
+    work_type: str = "unknown"  # remote/hybrid/onsite/unknown
 
     @property
     def fingerprint(self) -> str:
@@ -58,7 +59,6 @@ class Company(BaseModel):
     founded_year: int = 0
     employee_count: str = ""
     tags: str = ""
-    india_friendly: str = "unknown"
     last_crawled: str = ""
     crawl_status: str = "active"  # active/paused/failed
     notes: str = ""

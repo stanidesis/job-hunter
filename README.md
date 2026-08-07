@@ -9,7 +9,7 @@ An automated job discovery and cold outreach system built for software engineers
 ## What It Does
 
 ```
-Every day at 9:00 AM IST (automatic):
+Every day at the hour you configure on your profile (automatic):
 
   1. Collects jobs from 4 sources + 150 company career pages
   2. Scores each job against the ACTIVE profile (title/tech/exp/signals)
@@ -45,9 +45,9 @@ Stored as YAML in `profiles/`. Import any of them from the Profile page (or via 
 
 A profile is one row in the `profiles` table (JSON config), with sections matching the **Profile page tabs**:
 
-- **Search** — default search terms, positive/negative title keywords, relevant tech list, JSearch queries (country, posted-window, remote-only)
+- **Search** — default search terms, positive/negative title keywords, relevant skills list, JSearch queries (country, posted-window, remote-only)
 - **Scoring** — experience target (`fresher` / `junior` / `mid` / `senior` / `any`), min-score-to-show, min-score-to-store, weights for title/tech/experience/signals (sum to 100), core tech, domain signals
-- **Location** — India-positive / India-negative keywords, timezone-compatible / incompatible lists
+- **Location** — preferred / excluded locations, work types (remote/hybrid/on-site), timezone lists
 - **Outreach** — candidate name, bio, achievements, core/extra tech, short + long DM templates, LinkedIn search titles, email greeting, sender + recipient email, digest subject role word
 
 ### UI — `/profile` page
@@ -158,8 +158,10 @@ RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM=Job Hunter <onboarding@resend.dev>
 RESEND_TO=candidate@example.com
 
-# ─── Daily Digest Timing (IST timezone) ───
-DAILY_EMAIL_HOUR=9                  # 24-hour format (9 = 9:00 AM IST)
+# ─── Daily Digest Timing (env defaults; profile can override) ───
+DAILY_EMAIL_HOUR=9                  # 24-hour format
+DAILY_EMAIL_MINUTE=0
+DAILY_EMAIL_TIMEZONE=UTC
 DAILY_JOBS_COUNT=15                 # Number of jobs per email
 
 # ─── Server ───
@@ -185,7 +187,8 @@ GOOGLE_SHEET_ID=
 | `RESEND_API_KEY` | ✅ Required for email | Daily email won't send; scheduler disabled |
 | `RESEND_FROM` | ✅ Required for email | Daily email won't send; scheduler disabled |
 | `RESEND_TO` | ✅ Required for email | Daily email has no destination (unless set on the active profile) |
-| `DAILY_EMAIL_HOUR` | Optional (defaults to 9) | Email sends at 9 AM IST |
+| `DAILY_EMAIL_HOUR` | Optional (defaults to 9) | Fallback digest hour if profile has none |
+| `DAILY_EMAIL_TIMEZONE` | Optional (defaults to UTC) | Fallback timezone (profile overrides) |
 | `DAILY_JOBS_COUNT` | Optional (defaults to 15) | 15 jobs per email |
 | `HUNTER_API_KEY` | Optional | Currently unused — LinkedIn search URLs replaced Hunter |
 | `GOOGLE_SHEETS_CREDS` | Optional | Sheets export disabled |

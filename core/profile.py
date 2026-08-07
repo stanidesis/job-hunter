@@ -19,7 +19,7 @@ from typing import Optional
 
 from core.database import get_connection
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 PROFILES_DIR = Path(__file__).parent.parent / "profiles"
 
 _CACHE_LOCK = threading.Lock()
@@ -29,24 +29,23 @@ _ACTIVE_CACHE: dict = {"id": None, "name": None, "config": None}
 # ── Defaults ──────────────────────────────────────────────────────────
 
 def default_config() -> dict:
-    """Return a valid, complete config dict. New keys added in future
-    schema versions merge in here so older profiles keep loading."""
+    """Return a valid, complete config dict."""
     return {
         "schema_version": SCHEMA_VERSION,
         "search": {
             "default_terms": [],
             "title_keywords_positive": [],
             "title_keywords_negative": [],
-            "relevant_tech": [],
+            "relevant_skills": [],
             "jsearch_default_queries": [],
         },
         "scoring": {
             "experience_target": "mid",
             "min_relevance_score": 50,
             "min_score_to_store": 25,
-            "weights": {"title": 35, "tech": 35, "experience": 15, "signal": 15},
-            "core_tech": [],
-            "backend_signals": [],
+            "weights": {"title": 35, "skills": 35, "experience": 15, "signal": 15},
+            "core_skills": [],
+            "domain_signals": [],
             "experience_bonuses": {
                 "fresher": {"fresher": 15, "junior": 10, "mid": 0,   "senior": -5},
                 "junior":  {"fresher": 5,  "junior": 15, "mid": 5,   "senior": -5},
@@ -56,40 +55,52 @@ def default_config() -> dict:
             },
         },
         "location": {
-            "india_positive": [],
-            "india_negative": [],
+            "preferred_locations": [],
+            "excluded_locations": [],
+            "work_types": [],  # remote | hybrid | onsite; empty = any
             "timezone_compatible": [],
             "timezone_incompatible": [],
         },
         "outreach": {
             "candidate_name": "",
-            "candidate_core_tech": [],
-            "candidate_extra_tech": [],
+            "candidate_core_skills": [],
+            "candidate_extra_skills": [],
             "linkedin_search_titles": [
                 {"title": "Engineering Manager", "label": "Eng Manager", "category": "engineering"},
                 {"title": "Tech Lead", "label": "Tech Lead", "category": "engineering"},
-                {"title": "Head of Engineering", "label": "Head of Eng", "category": "engineering"},
+                {"title": "Head of Engineering", "label": "Head of Eng", "category": "executive"},
                 {"title": "CTO", "label": "CTO", "category": "executive"},
                 {"title": "CEO Founder", "label": "CEO / Founder", "category": "executive"},
                 {"title": "Technical Recruiter", "label": "Tech Recruiter", "category": "hr"},
                 {"title": "HR Manager", "label": "HR Manager", "category": "hr"},
+                {"title": "Talent Acquisition", "label": "TA", "category": "hr"},
             ],
             "bio_short": "",
             "achievements": [],
-            "dm_short_template": "",
-            "dm_long_template": "",
-            "email_digest_subject_role": "software",
+            "dm_short_template": (
+                "{greeting}, I noticed {company} is hiring for {title}. "
+                "I have {bio_short}. Would love to connect."
+            ),
+            "dm_long_template": (
+                "{greeting},\n\n"
+                "Noticed {company} is hiring for {title}. "
+                "I've been working with {skills} and thought there might be a fit.\n\n"
+                "{achievements}\n\n"
+                "Open to a short chat?\n\n"
+                "Thanks,\n{candidate_name}"
+            ),
+            "email_digest_subject_role": "matching",
             "email_greeting": "Your Daily Job Digest",
-            # Sender address is not a profile setting — it is fixed to
-            # RESEND_FROM in .env (Resend API). recipient_email overrides RESEND_TO.
             "recipient_email": "",
+            "email_hour": 9,
+            "email_minute": 0,
+            "email_timezone": "UTC",
         },
     }
 
 
 def validate_config(config: dict) -> dict:
-    """Deep-merge submitted config onto defaults so every expected key exists.
-    Enforces enum for experience_target. Leaves lists/strings as-is otherwise."""
+    """Deep-merge submitted config onto defaults so every expected key exists."""
     base = default_config()
     merged = _deep_merge(base, config or {})
 
@@ -97,15 +108,37 @@ def validate_config(config: dict) -> dict:
     if target not in ("fresher", "junior", "mid", "senior", "any"):
         merged["scoring"]["experience_target"] = "mid"
 
-    # Ensure weights are ints and non-negative
     w = merged["scoring"].get("weights") or {}
-    for k in ("title", "tech", "experience", "signal"):
+    for k in ("title", "skills", "experience", "signal"):
         try:
             w[k] = max(0, int(w.get(k, base["scoring"]["weights"][k])))
         except (TypeError, ValueError):
             w[k] = base["scoring"]["weights"][k]
     merged["scoring"]["weights"] = w
 
+    # Normalize work_types
+    allowed_wt = {"remote", "hybrid", "onsite"}
+    raw_wt = merged["location"].get("work_types") or []
+    merged["location"]["work_types"] = [
+        wt.lower().replace("on-site", "onsite").replace("on site", "onsite")
+        for wt in raw_wt
+        if str(wt).lower().replace("on-site", "onsite").replace("on site", "onsite") in allowed_wt
+    ]
+
+    # Email schedule
+    out = merged["outreach"]
+    try:
+        out["email_hour"] = max(0, min(23, int(out.get("email_hour", 9))))
+    except (TypeError, ValueError):
+        out["email_hour"] = 9
+    try:
+        out["email_minute"] = max(0, min(59, int(out.get("email_minute", 0))))
+    except (TypeError, ValueError):
+        out["email_minute"] = 0
+    tz = (out.get("email_timezone") or "UTC").strip()
+    out["email_timezone"] = tz or "UTC"
+
+    merged["schema_version"] = SCHEMA_VERSION
     return merged
 
 
@@ -167,6 +200,19 @@ def get_active_profile() -> dict:
     out["_id"] = row["id"]
     out["_name"] = row["name"]
     return out
+
+
+def get_email_schedule() -> dict:
+    """Return hour/minute/timezone for the daily digest from active profile,
+    falling back to env settings."""
+    from config import settings as s
+    profile = get_active_profile()
+    out = profile.get("outreach") or {}
+    return {
+        "hour": int(out.get("email_hour", getattr(s, "DAILY_EMAIL_HOUR", 9))),
+        "minute": int(out.get("email_minute", getattr(s, "DAILY_EMAIL_MINUTE", 0))),
+        "timezone": (out.get("email_timezone") or getattr(s, "DAILY_EMAIL_TIMEZONE", "UTC")),
+    }
 
 
 def list_profiles() -> list[dict]:
@@ -241,7 +287,6 @@ def update_profile(pid: int, config: dict = None, name: str = None,
     finally:
         conn.close()
 
-    # If the edited profile is active, drop cache so next read reflects changes.
     if _read_active_profile_id() == pid:
         invalidate_cache()
 
@@ -318,12 +363,7 @@ def _read_preset_meta(path: Path) -> Optional[dict]:
 
 def import_preset(slug: str, activate: bool = False,
                   overwrite: bool = False) -> int:
-    """Load profiles/<slug>.yaml into the profiles table.
-
-    If a profile with the same name already exists:
-      - overwrite=True  → update that row
-      - overwrite=False → create a new row with " (imported at ...)" suffix
-    """
+    """Load profiles/<slug>.yaml into the profiles table."""
     import yaml
     path = PROFILES_DIR / f"{slug}.yaml"
     if not path.exists():
@@ -393,9 +433,8 @@ def export_profile(pid: int) -> str:
 def seed_search_queries_from_profile(pid: int, replace: bool = False) -> int:
     """Push a profile's jsearch_default_queries into the search_queries table.
 
-    replace=True  → wipe existing search_queries first
-    replace=False → append; skip exact duplicates (by query text + country)
-    Returns count added.
+    Note: live JSearch list is stored on the profile itself; this remains for
+    any residual table consumers.
     """
     from core.database import (
         get_search_queries, add_search_query, delete_search_query,
@@ -406,8 +445,6 @@ def seed_search_queries_from_profile(pid: int, replace: bool = False) -> int:
     config = validate_config(json.loads(row["config_json"]))
     queries = config["search"].get("jsearch_default_queries") or []
 
-    # In replace mode, wipe before checking queries — switching to a profile
-    # with no queries should clear the old ones, not leak them.
     if replace:
         existing = get_search_queries()
         for q in existing:
@@ -423,14 +460,14 @@ def seed_search_queries_from_profile(pid: int, replace: bool = False) -> int:
 
     added = 0
     for q in queries:
-        key = (str(q.get("query", "")).strip().lower(), q.get("country", "IN"))
+        key = (str(q.get("query", "")).strip().lower(), q.get("country", "us"))
         if not key[0]:
             continue
         if key in existing_keys:
             continue
         add_search_query(
             query=q.get("query", ""),
-            country=q.get("country", "IN"),
+            country=q.get("country", "us"),
             date_posted=q.get("date_posted", "3days"),
             remote_jobs_only=bool(q.get("remote_jobs_only", False)),
         )
@@ -438,83 +475,25 @@ def seed_search_queries_from_profile(pid: int, replace: bool = False) -> int:
     return added
 
 
-# ── Legacy seed (first-run migration) ────────────────────────────────
-
-def _legacy_profile_from_settings() -> dict:
-    """Build a config dict from the pre-profile hardcoded constants.
-    Called once on first run when `profiles` table is empty."""
-    from config import settings as s
-
-    cfg = default_config()
-    cfg["search"]["default_terms"] = list(getattr(s, "DEFAULT_SEARCH_TERMS", []))
-    cfg["search"]["title_keywords_positive"] = list(getattr(s, "TITLE_KEYWORDS_POSITIVE", []))
-    cfg["search"]["title_keywords_negative"] = list(getattr(s, "TITLE_KEYWORDS_NEGATIVE", []))
-    cfg["search"]["relevant_tech"] = list(getattr(s, "RELEVANT_TECH", []))
-    cfg["search"]["jsearch_default_queries"] = [
-        {"query": "python django backend developer", "country": "IN", "date_posted": "3days", "remote_jobs_only": False},
-        {"query": "python backend engineer", "country": "IN", "date_posted": "3days", "remote_jobs_only": False},
-        {"query": "django developer", "country": "IN", "date_posted": "3days", "remote_jobs_only": False},
-        {"query": "fastapi developer", "country": "IN", "date_posted": "week", "remote_jobs_only": False},
-        {"query": "python backend remote", "country": "IN", "date_posted": "week", "remote_jobs_only": True},
-        {"query": "backend engineer python", "country": "US", "date_posted": "week", "remote_jobs_only": True},
-    ]
-
-    cfg["location"]["india_positive"] = list(getattr(s, "LOCATION_INDIA_POSITIVE", []))
-    cfg["location"]["india_negative"] = list(getattr(s, "LOCATION_INDIA_NEGATIVE", []))
-    cfg["location"]["timezone_compatible"] = list(getattr(s, "TIMEZONE_COMPATIBLE", []))
-    cfg["location"]["timezone_incompatible"] = list(getattr(s, "TIMEZONE_INCOMPATIBLE", []))
-
-    cfg["scoring"]["experience_target"] = "mid"
-    cfg["scoring"]["min_relevance_score"] = getattr(s, "MIN_RELEVANCE_SCORE", 50)
-    cfg["scoring"]["min_score_to_store"] = 25
-    cfg["scoring"]["core_tech"] = ["python", "django", "fastapi", "flask"]
-    cfg["scoring"]["backend_signals"] = [
-        "api", "backend", "back-end", "server-side", "microservice",
-        "database", "rest", "graphql", "endpoint",
-    ]
-
-    cfg["outreach"]["candidate_name"] = "Parmanand"
-    cfg["outreach"]["candidate_core_tech"] = ["python", "django", "fastapi", "drf"]
-    cfg["outreach"]["candidate_extra_tech"] = ["postgresql", "redis", "aws", "docker", "microservices"]
-    cfg["outreach"]["bio_short"] = "3+ years building {stack} backends"
-    cfg["outreach"]["achievements"] = [
-        "Backend Developer at DoctusTech, a healthcare SaaS serving 5,000+ US medical professionals.",
-        "Architected the Django/DRF platform, integrated 3 microservices, cut API response times 50% with Redis caching.",
-        "Previously built multitenant SaaS + Stripe integrations processing 2,000+ monthly transactions.",
-    ]
-    cfg["outreach"]["dm_short_template"] = (
-        "{greeting}, I noticed {company} is hiring for {title}. "
-        "I have {bio_short} — shipped a healthcare SaaS serving 5,000+ users "
-        "with sub-200ms APIs. Would love to connect."
-    )
-    cfg["outreach"]["dm_long_template"] = (
-        "{greeting},\n\n"
-        "Noticed {company} is hiring for {title}. The stack caught my eye — "
-        "I've been shipping {stack} backends for 3+ years.\n\n"
-        "{achievements}\n\n"
-        "Open to a 15-min chat to see if there's a fit?\n\n"
-        "Thanks,\n{candidate_name}"
-    )
-    cfg["outreach"]["email_digest_subject_role"] = "backend"
-    cfg["outreach"]["email_greeting"] = "Your Daily Job Digest"
-    return cfg
-
-
 def ensure_first_run_seed() -> Optional[int]:
-    """Idempotent: if profiles table is empty, seed the legacy profile and
-    set it active. Returns the new profile id, or None if not needed."""
+    """Idempotent: if profiles table is empty, import a neutral blank profile
+    and set it active. Returns the new profile id, or None if not needed."""
     conn = get_connection()
     try:
         count = conn.execute("SELECT COUNT(*) FROM profiles").fetchone()[0]
         if count > 0:
             return None
         ts = datetime.utcnow().isoformat()
-        cfg = _legacy_profile_from_settings()
+        cfg = default_config()
+        cfg["outreach"]["dm_short_template"] = (
+            "{greeting}, I noticed {company} is hiring for {title}. "
+            "I have {bio_short}. Would love to connect."
+        )
         cur = conn.execute(
             "INSERT INTO profiles (name, description, config_json, created_at, updated_at, source) "
-            "VALUES (?, ?, ?, ?, ?, 'legacy')",
-            ("Backend Python (legacy)",
-             "Seeded from pre-profile hardcoded settings. Edit or switch to another preset.",
+            "VALUES (?, ?, ?, ?, ?, 'seed')",
+            ("Default",
+             "Blank starter profile. Import a preset or edit to match your role.",
              json.dumps(cfg), ts, ts),
         )
         pid = cur.lastrowid
@@ -572,8 +551,7 @@ def _load_active_profile_config() -> tuple[Optional[int], dict]:
 
 
 def get_active_profile_queries() -> list[dict]:
-    """Return the active profile's jsearch queries with synthetic ids and
-    an enabled flag (defaults to True). Empty list if no active profile."""
+    """Return the active profile's jsearch queries with synthetic ids."""
     _, cfg = _load_active_profile_config()
     raw = (cfg.get("search") or {}).get("jsearch_default_queries") or []
     out = []
@@ -581,7 +559,7 @@ def get_active_profile_queries() -> list[dict]:
         out.append({
             "id": idx,
             "query": q.get("query", ""),
-            "country": q.get("country", "IN"),
+            "country": q.get("country", "us"),
             "date_posted": q.get("date_posted", "3days"),
             "remote_jobs_only": bool(q.get("remote_jobs_only", False)),
             "enabled": bool(q.get("enabled", True)),
@@ -589,11 +567,10 @@ def get_active_profile_queries() -> list[dict]:
     return out
 
 
-def add_active_profile_query(query: str, country: str = "IN",
+def add_active_profile_query(query: str, country: str = "us",
                              date_posted: str = "3days",
                              remote_jobs_only: bool = False) -> int:
-    """Append a query to the active profile. Returns its new index.
-    Raises ValueError if no active profile."""
+    """Append a query to the active profile. Returns its new index."""
     pid, cfg = _load_active_profile_config()
     if pid is None:
         raise ValueError("No active profile")

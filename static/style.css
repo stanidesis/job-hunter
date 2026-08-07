@@ -217,10 +217,14 @@ body {
 .status-stale { background: rgba(225,112,85,0.15); color: var(--red); }
 
 /* India-friendly badges */
-.india-yes { background: rgba(0,184,148,0.15); color: var(--green); border: 1px solid var(--green); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.india-maybe { background: rgba(253,203,110,0.15); color: var(--yellow); border: 1px solid var(--yellow); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.india-no { background: rgba(225,112,85,0.15); color: var(--red); border: 1px solid var(--red); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.india-unknown { background: rgba(139,143,163,0.15); color: var(--text-muted); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.fit-yes { background: rgba(0,184,148,0.15); color: var(--green); border: 1px solid var(--green); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.fit-maybe { background: rgba(253,203,110,0.15); color: var(--yellow); border: 1px solid var(--yellow); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.fit-no { background: rgba(225,112,85,0.15); color: var(--red); border: 1px solid var(--red); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.fit-unknown { background: rgba(139,143,163,0.15); color: var(--text-muted); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.work-type-badge { background: rgba(108,92,231,0.12); color: #a29bfe; border: 1px solid rgba(108,92,231,0.4); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.work-remote { color: var(--green); border-color: var(--green); background: rgba(0,184,148,0.1); }
+.work-hybrid { color: var(--yellow); border-color: var(--yellow); background: rgba(253,203,110,0.1); }
+.work-onsite { color: #74b9ff; border-color: #74b9ff; background: rgba(116,185,255,0.1); }
 .location-note { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
 /* ── Modal ── */

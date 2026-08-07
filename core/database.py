@@ -32,12 +32,22 @@ def init_db():
             company_domain TEXT DEFAULT '',
             salary TEXT DEFAULT '',
             job_type TEXT DEFAULT '',
-            india_friendly TEXT DEFAULT 'unknown',
-            location_note TEXT DEFAULT ''
+            location_fit TEXT DEFAULT 'unknown',
+            location_note TEXT DEFAULT '',
+            work_type TEXT DEFAULT 'unknown',
+            last_seen TEXT DEFAULT '',
+            mark_for_email INTEGER DEFAULT 0,
+            scored_profile_id INTEGER DEFAULT NULL
         )
     """)
-    # Migration for existing DBs
-    for col, default in [("india_friendly", "'unknown'"), ("location_note", "''"), ("last_seen", "''")]:
+    # Additive migrations for older DBs (safe no-ops if columns exist)
+    for col, default in [
+        ("location_fit", "'unknown'"),
+        ("location_note", "''"),
+        ("work_type", "'unknown'"),
+        ("last_seen", "''"),
+        ("tech_stack", "''"),
+    ]:
         try:
             conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} TEXT DEFAULT {default}")
         except sqlite3.OperationalError:
@@ -63,7 +73,6 @@ def init_db():
             founded_year INTEGER DEFAULT 0,
             employee_count TEXT DEFAULT '',
             tags TEXT DEFAULT '',
-            india_friendly TEXT DEFAULT 'unknown',
             last_crawled TEXT DEFAULT '',
             crawl_status TEXT DEFAULT 'active',
             notes TEXT DEFAULT ''
@@ -89,10 +98,10 @@ def init_db():
             followed_up_at TEXT DEFAULT '',
             created_at TEXT NOT NULL,
             notes TEXT DEFAULT '',
-            emailed_at TEXT DEFAULT ''
+            emailed_at TEXT DEFAULT '',
+            profile_id INTEGER DEFAULT NULL
         )
     """)
-    # Migration
     try:
         conn.execute("ALTER TABLE outreach ADD COLUMN emailed_at TEXT DEFAULT ''")
     except sqlite3.OperationalError:
@@ -128,12 +137,12 @@ def init_db():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_api_usage_name ON api_usage(api_name, called_at)")
 
-    # Search queries (configurable JSearch queries)
+    # Search queries (legacy table; live queries live on the profile)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS search_queries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             query TEXT NOT NULL,
-            country TEXT DEFAULT 'IN',
+            country TEXT DEFAULT 'us',
             date_posted TEXT DEFAULT '3days',
             remote_jobs_only INTEGER DEFAULT 0,
             enabled INTEGER DEFAULT 1,
@@ -141,26 +150,7 @@ def init_db():
         )
     """)
 
-    # Seed default queries only if table is empty
-    count = conn.execute("SELECT COUNT(*) FROM search_queries").fetchone()[0]
-    if count == 0:
-        from datetime import datetime as _dt
-        ts = _dt.utcnow().isoformat()
-        defaults = [
-            ("python django backend developer", "IN", "3days", 0),
-            ("python backend engineer", "IN", "3days", 0),
-            ("django developer", "IN", "3days", 0),
-            ("fastapi developer", "IN", "week", 0),
-            ("python backend remote", "IN", "week", 1),
-            ("backend engineer python", "US", "week", 1),
-        ]
-        for q in defaults:
-            conn.execute(
-                "INSERT INTO search_queries (query, country, date_posted, remote_jobs_only, enabled, created_at) VALUES (?, ?, ?, ?, 1, ?)",
-                (*q, ts),
-            )
-
-    # Profiles (per-user search/scoring/outreach config)
+    # Profiles
     conn.execute("""
         CREATE TABLE IF NOT EXISTS profiles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -173,7 +163,6 @@ def init_db():
         )
     """)
 
-    # Generic app-wide settings (currently holds active_profile_id)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS app_settings (
             key TEXT PRIMARY KEY,
@@ -190,7 +179,8 @@ def init_db():
     conn.execute("CREATE INDEX IF NOT EXISTS idx_source ON jobs(source)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON jobs(status)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_discovered ON jobs(discovered_at DESC)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_india ON jobs(india_friendly)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_location_fit ON jobs(location_fit)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_work_type ON jobs(work_type)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_company_domain ON jobs(company_domain)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_company_ats ON companies(ats_platform)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_company_status ON companies(crawl_status)")
@@ -198,13 +188,10 @@ def init_db():
     conn.commit()
     conn.close()
 
-    # First-run seed: if no profiles exist, create "Backend Python (legacy)"
-    # from current settings.py constants and set it active. Idempotent.
     try:
         from core.profile import ensure_first_run_seed
         ensure_first_run_seed()
     except Exception as e:
-        # Don't block server startup on a seed failure — log and continue.
         print(f"[init_db] profile seed skipped: {e}", flush=True)
 
 
@@ -218,11 +205,14 @@ def insert_job(job_dict: dict) -> str:
     conn = get_connection()
     now = datetime.utcnow().isoformat()
     job_dict["last_seen"] = now
+    job_dict.setdefault("location_fit", "unknown")
+    job_dict.setdefault("location_note", "")
+    job_dict.setdefault("work_type", "unknown")
+    job_dict.setdefault("tech_stack", "")
 
     try:
         existing = conn.execute("SELECT id FROM jobs WHERE id = ?", (job_dict["id"],)).fetchone()
         if existing:
-            # Update last_seen + refreshed timestamp; keep status/notes intact
             conn.execute("UPDATE jobs SET last_seen = ? WHERE id = ?", (now, job_dict["id"]))
             conn.commit()
             return "updated"
@@ -232,13 +222,13 @@ def insert_job(job_dict: dict) -> str:
                             source, posted_date, discovered_at, tech_stack,
                             experience_level, relevance_score, status,
                             company_domain, salary, job_type,
-                            india_friendly, location_note, last_seen,
+                            location_fit, location_note, work_type, last_seen,
                             scored_profile_id)
             VALUES (:id, :title, :company, :location, :description, :url,
                     :source, :posted_date, :discovered_at, :tech_stack,
                     :experience_level, :relevance_score, :status,
                     :company_domain, :salary, :job_type,
-                    :india_friendly, :location_note, :last_seen,
+                    :location_fit, :location_note, :work_type, :last_seen,
                     :scored_profile_id)
         """, job_dict)
         conn.commit()
@@ -254,7 +244,6 @@ def cleanup_old_jobs(days: int = 14) -> int:
     from datetime import datetime, timedelta
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
     conn = get_connection()
-    # Don't delete jobs user has marked applied or for_email
     cur = conn.execute(
         """DELETE FROM jobs
            WHERE (last_seen < ? OR last_seen = '' OR last_seen IS NULL)
@@ -295,10 +284,11 @@ def get_jobs(
     min_score: int = 0,
     search: Optional[str] = None,
     location: Optional[str] = None,
-    tech: Optional[str] = None,
-    india_friendly: Optional[str] = None,
+    skills: Optional[str] = None,
+    location_fit: Optional[str] = None,
+    work_type: Optional[str] = None,
     company_domain: Optional[str] = None,
-    seen_after: Optional[str] = None,     # ISO timestamp; only jobs refreshed at/after this
+    seen_after: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
 ) -> list[dict]:
@@ -319,16 +309,19 @@ def get_jobs(
     if location:
         query += " AND location LIKE ?"
         params.append(f"%{location}%")
-    if tech:
+    if skills:
         query += " AND tech_stack LIKE ?"
-        params.append(f"%{tech}%")
-    if india_friendly:
-        if india_friendly == "yes":
-            query += " AND india_friendly = 'yes'"
-        elif india_friendly == "no":
-            query += " AND india_friendly = 'no'"
-        elif india_friendly == "maybe":
-            query += " AND india_friendly IN ('yes', 'maybe')"
+        params.append(f"%{skills}%")
+    if location_fit:
+        if location_fit == "yes":
+            query += " AND location_fit = 'yes'"
+        elif location_fit == "no":
+            query += " AND location_fit = 'no'"
+        elif location_fit == "maybe":
+            query += " AND location_fit IN ('yes', 'maybe')"
+    if work_type:
+        query += " AND work_type = ?"
+        params.append(work_type)
     if company_domain:
         query += " AND company_domain = ?"
         params.append(company_domain)
@@ -367,8 +360,11 @@ def get_stats() -> dict:
     by_status = conn.execute(
         "SELECT status, COUNT(*) as count FROM jobs GROUP BY status"
     ).fetchall()
-    by_india = conn.execute(
-        "SELECT india_friendly, COUNT(*) as count FROM jobs GROUP BY india_friendly"
+    by_location_fit = conn.execute(
+        "SELECT location_fit, COUNT(*) as count FROM jobs GROUP BY location_fit"
+    ).fetchall()
+    by_work_type = conn.execute(
+        "SELECT work_type, COUNT(*) as count FROM jobs GROUP BY work_type"
     ).fetchall()
     avg_score = conn.execute(
         "SELECT AVG(relevance_score) FROM jobs WHERE relevance_score > 0"
@@ -378,7 +374,8 @@ def get_stats() -> dict:
         "total": total,
         "by_source": {row["source"]: row["count"] for row in by_source},
         "by_status": {row["status"]: row["count"] for row in by_status},
-        "by_india": {row["india_friendly"]: row["count"] for row in by_india},
+        "by_location_fit": {row["location_fit"]: row["count"] for row in by_location_fit},
+        "by_work_type": {row["work_type"]: row["count"] for row in by_work_type},
         "avg_score": round(avg_score, 1) if avg_score else 0,
     }
 
@@ -394,16 +391,31 @@ def get_sources() -> list[str]:
 
 def upsert_company(company_dict: dict) -> bool:
     conn = get_connection()
+    # Drop legacy fields if present
+    data = {
+        "id": company_dict.get("id", ""),
+        "name": company_dict.get("name", ""),
+        "domain": company_dict.get("domain", ""),
+        "careers_url": company_dict.get("careers_url", ""),
+        "ats_platform": company_dict.get("ats_platform", "unknown"),
+        "ats_slug": company_dict.get("ats_slug", ""),
+        "founded_year": company_dict.get("founded_year", 0) or 0,
+        "employee_count": company_dict.get("employee_count", ""),
+        "tags": company_dict.get("tags", ""),
+        "last_crawled": company_dict.get("last_crawled", ""),
+        "crawl_status": company_dict.get("crawl_status", "active"),
+        "notes": company_dict.get("notes", ""),
+    }
     try:
         conn.execute("""
             INSERT OR REPLACE INTO companies
                 (id, name, domain, careers_url, ats_platform, ats_slug,
-                 founded_year, employee_count, tags, india_friendly,
+                 founded_year, employee_count, tags,
                  last_crawled, crawl_status, notes)
             VALUES (:id, :name, :domain, :careers_url, :ats_platform, :ats_slug,
-                    :founded_year, :employee_count, :tags, :india_friendly,
+                    :founded_year, :employee_count, :tags,
                     :last_crawled, :crawl_status, :notes)
-        """, company_dict)
+        """, data)
         conn.commit()
         return True
     except Exception:
@@ -415,7 +427,6 @@ def upsert_company(company_dict: dict) -> bool:
 def get_companies(
     ats_platform: Optional[str] = None,
     crawl_status: Optional[str] = None,
-    india_friendly: Optional[str] = None,
     search: Optional[str] = None,
     limit: int = 200,
     offset: int = 0,
@@ -430,9 +441,6 @@ def get_companies(
     if crawl_status:
         query += " AND crawl_status = ?"
         params.append(crawl_status)
-    if india_friendly:
-        query += " AND india_friendly = ?"
-        params.append(india_friendly)
     if search:
         query += " AND (name LIKE ? OR domain LIKE ? OR tags LIKE ?)"
         s = f"%{search}%"
@@ -504,7 +512,7 @@ def get_outreach(
     conn = get_connection()
     query = """
         SELECT o.*, j.url as job_url, j.relevance_score, j.tech_stack,
-               j.location, j.salary, j.india_friendly
+               j.location, j.salary, j.location_fit, j.work_type
         FROM outreach o
         LEFT JOIN jobs j ON j.id = o.job_id
         WHERE 1=1
@@ -524,8 +532,6 @@ def get_outreach(
             query += f" AND o.created_at {op} ?"
             params.append(batch_at)
         elif batch == "new":
-            # No recorded batch yet — treat the most recent generation as "new"
-            # by returning nothing until a generation actually runs.
             query += " AND 0"
     query += " ORDER BY o.created_at DESC, j.relevance_score DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
@@ -630,9 +636,7 @@ def get_outreach_stats() -> dict:
 
 
 def get_unemailed_outreach(limit: int = 15, only_marked: bool = False) -> list[dict]:
-    """Get outreach items that haven't been emailed yet.
-    If only_marked=True, only returns items for jobs marked for email.
-    Otherwise prefers marked jobs but falls back to highest score."""
+    """Get outreach items that haven't been emailed yet."""
     conn = get_connection()
     where = "(o.emailed_at = '' OR o.emailed_at IS NULL) AND o.status = 'pending'"
     if only_marked:
@@ -640,7 +644,7 @@ def get_unemailed_outreach(limit: int = 15, only_marked: bool = False) -> list[d
 
     rows = conn.execute(f"""
         SELECT o.*, j.relevance_score, j.url AS job_url, j.description AS job_description,
-               j.tech_stack, j.salary, j.location, j.posted_date, j.india_friendly,
+               j.tech_stack, j.salary, j.location, j.posted_date, j.location_fit, j.work_type,
                j.mark_for_email
         FROM outreach o
         LEFT JOIN jobs j ON j.id = o.job_id
@@ -653,9 +657,6 @@ def get_unemailed_outreach(limit: int = 15, only_marked: bool = False) -> list[d
 
 
 def mark_outreach_emailed(outreach_ids: list[str]):
-    """Flip sent items from pending → emailed so they drop out of the
-    'ready to send' queue. Items already in messaged/replied/followed_up
-    keep their current status (we only update ones still 'pending')."""
     from datetime import datetime
     conn = get_connection()
     ts = datetime.utcnow().isoformat()
@@ -693,7 +694,7 @@ def get_search_queries(enabled_only: bool = False) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def add_search_query(query: str, country: str = "IN", date_posted: str = "3days",
+def add_search_query(query: str, country: str = "us", date_posted: str = "3days",
                       remote_jobs_only: bool = False) -> int:
     from datetime import datetime
     conn = get_connection()
@@ -752,14 +753,12 @@ def get_api_usage(api_name: str) -> dict:
     """Returns usage stats for a given API — monthly count."""
     from datetime import datetime
     conn = get_connection()
-    # Month start ISO string
     now = datetime.utcnow()
     month_start = datetime(now.year, now.month, 1).isoformat()
     month = conn.execute(
         "SELECT COUNT(*) FROM api_usage WHERE api_name=? AND called_at >= ?",
         (api_name, month_start),
     ).fetchone()[0]
-    # Today
     today_start = datetime(now.year, now.month, now.day).isoformat()
     today = conn.execute(
         "SELECT COUNT(*) FROM api_usage WHERE api_name=? AND called_at >= ?",
@@ -790,13 +789,9 @@ def get_company_stats() -> dict:
     by_status = conn.execute(
         "SELECT crawl_status, COUNT(*) as count FROM companies GROUP BY crawl_status"
     ).fetchall()
-    by_india = conn.execute(
-        "SELECT india_friendly, COUNT(*) as count FROM companies GROUP BY india_friendly"
-    ).fetchall()
     conn.close()
     return {
         "total": total,
         "by_platform": {row["ats_platform"]: row["count"] for row in by_platform},
         "by_status": {row["crawl_status"]: row["count"] for row in by_status},
-        "by_india": {row["india_friendly"]: row["count"] for row in by_india},
     }

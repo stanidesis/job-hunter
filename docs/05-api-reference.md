@@ -15,8 +15,9 @@ List jobs with filters.
 - `min_score` — integer 0-100
 - `search` — free text (title, company, description)
 - `location` — partial match
-- `tech` — partial match on tech_stack
-- `india_friendly` — yes / maybe / no
+- - `location_fit` — yes / maybe / no
+- `work_type` — remote / hybrid / onsite / unknown
+- `skills` — partial match on matched skills
 - `company_domain` — exact match
 - `limit` — default 50, max 500
 - `offset` — pagination offset
@@ -54,7 +55,8 @@ Aggregated stats.
   "total": 880,
   "by_source": {"jsearch": 120, "greenhouse:mongodb": 143, ...},
   "by_status": {"new": 800, "applied": 10, ...},
-  "by_india": {"yes": 494, "maybe": 351, "no": 35},
+  "by_location_fit": {"yes": 494, "maybe": 351, "no": 35},
+  "by_work_type": {"remote": 400, "hybrid": 50, "onsite": 30},
   "avg_score": 38.8
 }
 ```
@@ -115,7 +117,7 @@ Delete a query.
 ## Companies (background use, no UI currently)
 
 ### `GET /api/companies`
-List companies with filters (ats_platform, crawl_status, india_friendly, search).
+List companies with filters (ats_platform, crawl_status, search).
 
 ### `POST /api/companies`
 Add a company manually.
@@ -178,7 +180,7 @@ Generate outreach for top N jobs without existing outreach.
 **Query params:**
 - `min_score` — default 40
 - `limit` — default 15
-- `india_friendly` — default "maybe"
+- `location_fit` — default "maybe"
 
 ### `PATCH /api/outreach/{id}/status`
 Update outreach status.
@@ -208,7 +210,8 @@ Check email configuration + recent sends.
   "recipient_source": "env",
   "candidate_name": "Alex",
   "scheduled_hour": 9,
-  "timezone": "Asia/Kolkata",
+  "timezone": "UTC",
+  "scheduled_minute": 0,
   "recent_sends": [...]
 }
 ```

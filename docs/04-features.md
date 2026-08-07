@@ -148,7 +148,7 @@ Click status buttons as you progress. Timestamps auto-recorded.
 
 ## Daily Email
 
-Sent automatically at **9:00 AM IST** every day.
+Sent automatically at the hour/timezone configured on your active profile (defaults to 09:00 UTC).
 
 ### Email subject
 `Daily Job Digest - 15 opportunities (Apr 15)`

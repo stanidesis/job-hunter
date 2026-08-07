@@ -1,6 +1,6 @@
 name: "Fresher / Entry-Level (Any Stack)"
-description: "For new grads and interns — no YOE penalty, rewards junior/trainee signals, broad tech stack."
-schema_version: 1
+description: "For new grads and interns — no YOE penalty, rewards junior/trainee signals."
+schema_version: 2
 
 search:
   default_terms:
@@ -24,7 +24,6 @@ search:
     - "associate"
     - "fresher"
     - "new grad"
-    - "associate engineer"
     - "campus hire"
   title_keywords_negative:
     - "senior"
@@ -40,7 +39,7 @@ search:
     - "10+ years"
     - "8+ years"
     - "5+ years"
-  relevant_tech:
+  relevant_skills:
     - "python"
     - "java"
     - "javascript"
@@ -48,155 +47,73 @@ search:
     - "c++"
     - "c#"
     - "go"
-    - "sql"
-    - "html"
-    - "css"
     - "react"
-    - "node"
-    - "nodejs"
-    - "django"
-    - "flask"
-    - "spring"
+    - "sql"
     - "git"
     - "linux"
-    - "docker"
     - "aws"
-    - "rest"
-    - "mysql"
-    - "postgresql"
-    - "mongodb"
+    - "docker"
   jsearch_default_queries:
-    - { query: "graduate software engineer", country: "IN", date_posted: "week", remote_jobs_only: false }
-    - { query: "entry level software developer", country: "IN", date_posted: "week", remote_jobs_only: false }
-    - { query: "junior software engineer", country: "IN", date_posted: "week", remote_jobs_only: false }
-    - { query: "fresher software developer", country: "IN", date_posted: "3days", remote_jobs_only: false }
-    - { query: "software engineer trainee", country: "IN", date_posted: "week", remote_jobs_only: false }
-    - { query: "new grad software engineer", country: "IN", date_posted: "week", remote_jobs_only: true }
+    - { query: "junior software engineer", country: "us", date_posted: "3days", remote_jobs_only: false }
+    - { query: "entry level software engineer", country: "us", date_posted: "3days", remote_jobs_only: false }
+    - { query: "new grad software engineer", country: "us", date_posted: "week", remote_jobs_only: false }
+    - { query: "graduate software engineer", country: "gb", date_posted: "week", remote_jobs_only: false }
+    - { query: "junior developer remote", country: "us", date_posted: "week", remote_jobs_only: true }
 
 scoring:
   experience_target: "fresher"
   min_relevance_score: 40
   min_score_to_store: 20
-  weights: { title: 35, tech: 30, experience: 20, signal: 15 }
-  core_tech:
-    - "python"
-    - "java"
-    - "javascript"
-    - "sql"
-    - "git"
-  backend_signals:
+  weights: { title: 40, skills: 25, experience: 20, signal: 15 }
+  core_skills: []
+  domain_signals:
     - "learn"
-    - "mentor"
     - "training"
-    - "onboarding"
-    - "rotation"
-    - "fundamental"
-    - "fresh graduate"
-    - "b.tech"
-    - "b.e."
-    - "mca"
-    - "0-1 year"
-    - "0-2 years"
-    - "campus"
-    - "new grad"
+    - "mentorship"
+    - "graduate"
     - "entry level"
+    - "internship"
 
 location:
-  india_positive:
-    - "india"
-    - "asia"
+  preferred_locations:
     - "worldwide"
-    - "global"
     - "anywhere"
-    - "apac"
-    - "asia pacific"
-    - "asia-pacific"
-    - "remote - global"
-    - "remote global"
-    - "globally distributed"
-    - "work from anywhere"
-    - "south asia"
-    - "southeast asia"
-    - "mumbai"
-    - "bangalore"
-    - "bengaluru"
-    - "hyderabad"
-    - "pune"
-    - "delhi"
-    - "chennai"
-    - "kolkata"
-    - "noida"
-    - "gurgaon"
-    - "gurugram"
-    - "new delhi"
-    - "kochi"
-    - "jaipur"
-    - "ahmedabad"
-    - "remote - india"
-    - "ist"
-    - "indian standard time"
-  india_negative:
-    - "us only"
-    - "usa only"
-    - "us-only"
-    - "united states only"
-    - "us-based"
-    - "u.s. only"
-    - "canada only"
-    - "uk only"
-    - "eu only"
-    - "europe only"
-    - "must be authorized to work in the united states"
-    - "no visa sponsorship"
-    - "us citizen"
-    - "us work authorization"
-    - "americas only"
-    - "north america only"
-  timezone_compatible:
-    - "ist"
-    - "gmt"
-    - "utc"
-    - "cet"
-    - "flexible"
-    - "async"
-    - "asynchronous"
-    - "overlap"
-    - "any timezone"
-  timezone_incompatible:
-    - "pst only"
-    - "est only"
-    - "cst only"
-    - "mst only"
-    - "us timezone required"
-    - "us hours required"
+    - "global"
+    - "remote"
+  excluded_locations: []
+  work_types:
+    - remote
+    - hybrid
+    - onsite
+  timezone_compatible: []
+  timezone_incompatible: []
 
 outreach:
-  candidate_name: "[Your Name]"
-  candidate_core_tech: ["python", "java", "javascript", "sql"]
-  candidate_extra_tech: ["git", "html", "css", "linux"]
+  candidate_name: ""
+  candidate_core_skills: []
+  candidate_extra_skills: []
   linkedin_search_titles:
     - { title: "Engineering Manager", label: "Eng Manager", category: "engineering" }
-    - { title: "Tech Lead", label: "Tech Lead", category: "engineering" }
-    - { title: "Campus Recruiter", label: "Campus Recruiter", category: "hr" }
-    - { title: "Technical Recruiter", label: "Tech Recruiter", category: "hr" }
-    - { title: "HR Manager", label: "HR Manager", category: "hr" }
-    - { title: "University Recruiting", label: "University Recruiting", category: "hr" }
-  bio_short: "a fresh graduate with hands-on projects in {stack}"
-  achievements:
-    - "CS graduate with strong fundamentals in data structures, algorithms, and OOP."
-    - "Built 3+ full-stack projects on GitHub — REST APIs, authentication, database design."
-    - "Contributed to 2 open-source projects; comfortable shipping PRs and reading large codebases."
-  dm_short_template: "{greeting}, I saw {company} is hiring for {title}. I'm {bio_short}. Would love to connect and learn more about the role."
+    - { title: "Recruiter", label: "Recruiter", category: "hr" }
+    - { title: "Talent Acquisition", label: "TA", category: "hr" }
+    - { title: "University Recruiter", label: "University", category: "hr" }
+  bio_short: "a recent graduate eager to contribute"
+  achievements: []
+  dm_short_template: "{greeting}, I saw {company} is hiring for {title}. I'm {bio_short} and would love to connect."
   dm_long_template: |
     {greeting},
 
-    I noticed {company} is hiring for {title}. The stack caught my eye — I've been building with {stack} through my coursework and side projects.
+    Noticed {company} is hiring for {title}. I'm early in my career and excited about this kind of work.
 
     {achievements}
 
-    Would love a 15-min chat to hear what you look for in new grads.
+    Would you be open to a short conversation?
 
     Thanks,
     {candidate_name}
   email_digest_subject_role: "entry-level"
   email_greeting: "Your Daily Job Digest"
+  recipient_email: ""
+  email_hour: 9
+  email_minute: 0
+  email_timezone: "UTC"

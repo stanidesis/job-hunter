@@ -2,7 +2,7 @@ const state = {
     jobs: [],
     stats: {},
     sources: [],
-    filters: { source: '', status: '', min_score: 0, search: '', location: '', tech: '', india_friendly: '' },
+    filters: { source: '', status: '', min_score: 0, search: '', location: '', skills: '', location_fit: '', work_type: '' },
     offset: 0,
     limit: 50,
     collecting: false,
@@ -22,8 +22,9 @@ async function loadJobs() {
     if (f.min_score) params.set('min_score', f.min_score);
     if (f.search) params.set('search', f.search);
     if (f.location) params.set('location', f.location);
-    if (f.tech) params.set('tech', f.tech);
-    if (f.india_friendly) params.set('india_friendly', f.india_friendly);
+    if (f.skills) params.set('skills', f.skills);
+    if (f.location_fit) params.set('location_fit', f.location_fit);
+    if (f.work_type) params.set('work_type', f.work_type);
     params.set('limit', state.limit);
     params.set('offset', state.offset);
 
@@ -128,24 +129,37 @@ async function updateStatus(jobId, status) {
     await loadJobs();
 }
 
-// ── India badge helper ──
-function indiaBadge(value, note) {
+// ── Badge helpers ──
+function locationFitBadge(value, note) {
     const labels = {
-        yes: 'India OK',
-        maybe: 'Maybe India',
-        no: 'Not India',
-        unknown: 'Unknown',
+        yes: 'Location ✓',
+        maybe: 'Location ~',
+        no: 'Location ✗',
+        unknown: 'Location ?',
     };
     const label = labels[value] || labels.unknown;
-    const cls = `india-${value || 'unknown'}`;
+    const cls = `fit-${value || 'unknown'}`;
     const tooltip = note ? ` title="${escapeHtml(note)}"` : '';
     return `<span class="${cls}"${tooltip}>${label}</span>`;
+}
+
+function workTypeBadge(value) {
+    const labels = {
+        remote: 'Remote',
+        hybrid: 'Hybrid',
+        onsite: 'On-site',
+        unknown: '',
+    };
+    const label = labels[value];
+    if (!label) return '';
+    return `<span class="work-type-badge work-${value || 'unknown'}">${label}</span>`;
 }
 
 // ── Render ──
 function renderStats() {
     const s = state.stats;
-    const indiaStats = s.by_india || {};
+    const fitStats = s.by_location_fit || {};
+    const wtStats = s.by_work_type || {};
     document.getElementById('stats-bar').innerHTML = `
         <div class="stat-card">
             <div class="label">Total Jobs</div>
@@ -156,16 +170,16 @@ function renderStats() {
             <div class="value">${s.avg_score || 0}</div>
         </div>
         <div class="stat-card" style="border-color: var(--green);">
-            <div class="label">India Friendly</div>
-            <div class="value" style="color: var(--green);">${indiaStats['yes'] || 0}</div>
+            <div class="label">Location Match</div>
+            <div class="value" style="color: var(--green);">${fitStats['yes'] || 0}</div>
         </div>
         <div class="stat-card" style="border-color: var(--yellow);">
-            <div class="label">Maybe India</div>
-            <div class="value" style="color: var(--yellow);">${indiaStats['maybe'] || 0}</div>
+            <div class="label">Partial Fit</div>
+            <div class="value" style="color: var(--yellow);">${fitStats['maybe'] || 0}</div>
         </div>
-        <div class="stat-card" style="border-color: var(--red);">
-            <div class="label">Not India</div>
-            <div class="value" style="color: var(--red);">${indiaStats['no'] || 0}</div>
+        <div class="stat-card">
+            <div class="label">Remote / Hybrid / On-site</div>
+            <div class="value" style="font-size:16px;">${wtStats['remote'] || 0} / ${wtStats['hybrid'] || 0} / ${wtStats['onsite'] || 0}</div>
         </div>
         ${Object.entries(s.by_source || {}).map(([src, count]) => `
             <div class="stat-card">
@@ -234,7 +248,8 @@ function renderJobs() {
                     <span>${escapeHtml(job.source)}</span>
                     ${job.salary ? `<span>${escapeHtml(job.salary)}</span>` : ''}
                     ${job.posted_date ? `<span>${formatDate(job.posted_date)}</span>` : ''}
-                    ${indiaBadge(job.india_friendly, job.location_note)}
+                    ${locationFitBadge(job.location_fit, job.location_note)}
+                    ${workTypeBadge(job.work_type)}
                     ${job.last_seen ? `<span style="font-size:11px;color:var(--text-muted);">Last seen: ${formatDate(job.last_seen)}</span>` : ''}
                 </div>
                 <div class="job-tags">
@@ -263,7 +278,8 @@ function openModal(jobId) {
                 ${job.relevance_score}
             </span>
             <span class="status-badge ${statusClass(job.status)}">${job.status}</span>
-            ${indiaBadge(job.india_friendly, job.location_note)}
+            ${locationFitBadge(job.location_fit, job.location_note)}
+            ${workTypeBadge(job.work_type)}
             <span class="tag">${escapeHtml(job.source)}</span>
             ${job.salary ? `<span class="tag">${escapeHtml(job.salary)}</span>` : ''}
             ${job.experience_level ? `<span class="tag">${escapeHtml(job.experience_level)}</span>` : ''}
@@ -324,8 +340,9 @@ function applyFilters() {
     state.filters.min_score = parseInt(document.getElementById('filter-score').value) || 0;
     state.filters.search = document.getElementById('filter-search').value;
     state.filters.location = document.getElementById('filter-location').value;
-    state.filters.tech = document.getElementById('filter-tech').value;
-    state.filters.india_friendly = document.getElementById('filter-india').value;
+    state.filters.skills = document.getElementById('filter-skills').value;
+    state.filters.location_fit = document.getElementById('filter-location-fit').value;
+    state.filters.work_type = document.getElementById('filter-work-type').value;
     state.offset = 0;
     loadJobs();
 }
@@ -336,9 +353,10 @@ function resetFilters() {
     document.getElementById('filter-score').value = '0';
     document.getElementById('filter-search').value = '';
     document.getElementById('filter-location').value = '';
-    document.getElementById('filter-tech').value = '';
-    document.getElementById('filter-india').value = '';
-    state.filters = { source: '', status: '', min_score: 0, search: '', location: '', tech: '', india_friendly: '' };
+    document.getElementById('filter-skills').value = '';
+    document.getElementById('filter-location-fit').value = '';
+    document.getElementById('filter-work-type').value = '';
+    state.filters = { source: '', status: '', min_score: 0, search: '', location: '', skills: '', location_fit: '', work_type: '' };
     state.offset = 0;
     loadJobs();
 }
@@ -401,8 +419,10 @@ async function doExport() {
     params.set('sheet_name', document.getElementById('export-sheet-name').value);
     params.set('min_score', document.getElementById('export-score').value);
     params.set('mode', document.getElementById('export-mode').value);
-    const india = document.getElementById('export-india').value;
-    if (india) params.set('india_friendly', india);
+    const locFit = document.getElementById('export-location-fit').value;
+    if (locFit) params.set('location_fit', locFit);
+    const wt = document.getElementById('export-work-type').value;
+    if (wt) params.set('work_type', wt);
 
     try {
         const data = await api(`/export/sheets?${params}`, { method: 'POST' });

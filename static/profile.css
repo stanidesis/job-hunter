@@ -165,6 +165,19 @@
 .num-input { width: 120px; }
 .textarea-input { resize: vertical; }
 
+.checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+.checkbox-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
 .radio-row {
     display: flex;
     gap: 16px;

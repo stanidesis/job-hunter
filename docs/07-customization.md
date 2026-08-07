@@ -49,7 +49,7 @@ The system is currently tuned for **Python/Django backend**. To target other rol
 
 ### For frontend developers:
 ```python
-TITLE_KEYWORDS_POSITIVE = [
+title_keywords_positive (profile) = [
     "frontend", "front-end", "react", "vue", "angular",
     "software engineer", "ui engineer", "full stack",
 ]
@@ -59,7 +59,7 @@ TITLE_KEYWORDS_NEGATIVE = [
     "qa", "intern", "trainee", "junior",
 ]
 
-RELEVANT_TECH = [
+relevant_skills (profile) = [
     "react", "vue", "angular", "typescript", "javascript",
     "nextjs", "redux", "tailwind", "css", "html",
     "graphql", "webpack", "vite", "jest",
@@ -68,12 +68,12 @@ RELEVANT_TECH = [
 
 ### For data engineers:
 ```python
-TITLE_KEYWORDS_POSITIVE = [
+title_keywords_positive (profile) = [
     "data engineer", "data", "etl", "analytics engineer",
     "pipeline", "warehouse",
 ]
 
-RELEVANT_TECH = [
+relevant_skills (profile) = [
     "python", "sql", "dbt", "airflow", "spark",
     "kafka", "snowflake", "bigquery", "redshift",
     "pandas", "databricks", "aws", "gcp",
@@ -82,12 +82,12 @@ RELEVANT_TECH = [
 
 ### For ML engineers:
 ```python
-TITLE_KEYWORDS_POSITIVE = [
+title_keywords_positive (profile) = [
     "machine learning", "ml engineer", "ai engineer",
     "mlops", "data scientist",
 ]
 
-RELEVANT_TECH = [
+relevant_skills (profile) = [
     "pytorch", "tensorflow", "transformers", "langchain",
     "huggingface", "numpy", "pandas", "sklearn",
     "mlflow", "kubeflow", "sagemaker",
@@ -131,10 +131,9 @@ LOCATION_NEGATIVE = [
 
 Also update JSearch queries via UI to use `country=US`.
 
-### Remove India filter entirely
-In `core/scorer.py`, set `check_india_friendly()` to always return "yes".
-
-Or in API calls, don't pass `india_friendly` filter.
+### Location & work type
+Edit the profile **Location** tab: preferred locations, exclusions, and Remote / Hybrid / On-site preferences.
+Location fit is computed by `check_location_fit()`; work type by `detect_work_type()`.
 
 ---
 
@@ -159,7 +158,7 @@ top_jobs = get_jobs(min_score=60, ...)  # default: 40
 ### Different time of day
 Edit `.env`:
 ```
-DAILY_EMAIL_HOUR=7   # 7 AM IST instead of 9 AM
+DAILY_EMAIL_HOUR=7   # env fallback; prefer Profile → Outreach → Daily Digest Schedule
 ```
 
 ### Different timezone
@@ -314,7 +313,7 @@ short = (
 
 Use the Google Sheets export endpoint:
 ```
-POST /api/export/sheets?min_score=50&india_friendly=yes
+POST /api/export/sheets?min_score=50&location_fit=yes&work_type=remote
 ```
 
 Then in n8n:

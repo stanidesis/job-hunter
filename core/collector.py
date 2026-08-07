@@ -99,12 +99,13 @@ def _score_and_store(jobs: list[Job], stats: dict, profile: dict = None):
 
         job.relevance_score = result["score"]
         job.experience_level = result["experience_level"]
-        job.india_friendly = result["india_friendly"]
+        job.location_fit = result["location_fit"]
         job.location_note = result["location_note"]
+        job.work_type = result["work_type"]
 
-        existing_tech = set(t.strip() for t in job.tech_stack.split(",") if t.strip())
-        existing_tech.update(result["tech_stack"])
-        job.tech_stack = ", ".join(sorted(existing_tech))
+        existing_skills = set(t.strip() for t in job.tech_stack.split(",") if t.strip())
+        existing_skills.update(result["matched_skills"])
+        job.tech_stack = ", ".join(sorted(existing_skills))
 
         if not job.company_domain:
             job.company_domain = job.extract_domain()

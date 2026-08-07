@@ -40,20 +40,12 @@ async def discover_from_yc(min_team_size: int = 10, max_pages: int = 250) -> lis
                         continue
                     domain = website.replace("https://", "").replace("http://", "").replace("www.", "").strip("/")
 
-                    regions = c.get("regions", []) or []
-                    india_friendly = "unknown"
-                    if any("india" in r.lower() for r in regions):
-                        india_friendly = "yes"
-                    elif any(r.lower() in ["remote", "global", "worldwide"] for r in regions):
-                        india_friendly = "maybe"
-
                     companies.append({
                         "name": c.get("name", ""),
                         "domain": domain,
                         "employee_count": str(team) + "+",
                         "founded_year": int(c.get("batch", "W20")[1:]) + 2000 if c.get("batch") else 0,
                         "tags": ",".join(c.get("industries", []) or []),
-                        "india_friendly": india_friendly,
                         "notes": f"YC {c.get('batch', '')} | {c.get('oneLiner', '')}",
                     })
 
@@ -93,7 +85,6 @@ async def discover_from_remoteintech() -> list[dict]:
                     "name": name,
                     "domain": "",
                     "tags": "remote-friendly",
-                    "india_friendly": "maybe",
                     "notes": "From remoteintech/remote-jobs",
                 })
 
@@ -124,7 +115,6 @@ async def discover_from_wwr() -> list[dict]:
                         "name": name,
                         "domain": "",
                         "tags": "remote-friendly",
-                        "india_friendly": "maybe",
                         "notes": "From WeWorkRemotely",
                     })
 
@@ -326,7 +316,6 @@ async def run_bulk_discovery(
             "founded_year": c.get("founded_year", 0),
             "employee_count": c.get("employee_count", ""),
             "tags": c.get("tags", ""),
-            "india_friendly": c.get("india_friendly", "unknown"),
             "last_crawled": "",
             "crawl_status": "active" if c.get("ats_platform", "unknown") != "unknown" else "paused",
             "notes": c.get("notes", ""),

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Scraper Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/style.css?v=6">
 </head>
 <body>
     <!-- Header -->
@@ -67,21 +67,31 @@
             </select>
         </div>
         <div class="filter-group">
-            <label>India Remote</label>
-            <select id="filter-india" onchange="applyFilters()">
+            <label>Location Fit</label>
+            <select id="filter-location-fit" onchange="applyFilters()">
                 <option value="">All</option>
-                <option value="yes">India Friendly</option>
-                <option value="maybe">India + Maybe</option>
-                <option value="no">Not India</option>
+                <option value="yes">Match</option>
+                <option value="maybe">Match + Partial</option>
+                <option value="no">No match</option>
             </select>
         </div>
         <div class="filter-group">
-            <label>Location</label>
-            <input type="text" id="filter-location" placeholder="e.g. Remote, USA" onchange="applyFilters()">
+            <label>Work Type</label>
+            <select id="filter-work-type" onchange="applyFilters()">
+                <option value="">Any</option>
+                <option value="remote">Remote</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="onsite">On-site</option>
+                <option value="unknown">Unknown</option>
+            </select>
         </div>
         <div class="filter-group">
-            <label>Tech</label>
-            <input type="text" id="filter-tech" placeholder="e.g. python, django" onchange="applyFilters()">
+            <label>Location text</label>
+            <input type="text" id="filter-location" placeholder="e.g. Remote, London" onchange="applyFilters()">
+        </div>
+        <div class="filter-group">
+            <label>Skills</label>
+            <input type="text" id="filter-skills" placeholder="e.g. python, sales" onchange="applyFilters()">
         </div>
         <div class="filter-group" style="justify-content: flex-end;">
             <label>&nbsp;</label>
@@ -134,12 +144,14 @@
                     <div class="filter-group">
                         <label>Country</label>
                         <select id="new-country">
-                            <option value="IN">IN</option>
-                            <option value="US">US</option>
-                            <option value="GB">GB</option>
-                            <option value="CA">CA</option>
-                            <option value="DE">DE</option>
-                            <option value="SG">SG</option>
+                            <option value="us">US</option>
+                            <option value="gb">GB</option>
+                            <option value="ca">CA</option>
+                            <option value="de">DE</option>
+                            <option value="au">AU</option>
+                            <option value="sg">SG</option>
+                            <option value="in">IN</option>
+                            <option value="nl">NL</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -188,11 +200,20 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>India Remote</label>
-                    <select id="export-india" style="width:100%;">
+                    <label>Location Fit</label>
+                    <select id="export-location-fit" style="width:100%;">
                         <option value="">All</option>
-                        <option value="yes">India Friendly Only</option>
-                        <option value="maybe">India + Maybe</option>
+                        <option value="yes">Match only</option>
+                        <option value="maybe">Match + Partial</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Work Type</label>
+                    <select id="export-work-type" style="width:100%;">
+                        <option value="">Any</option>
+                        <option value="remote">Remote</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="onsite">On-site</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -211,6 +232,6 @@
         </div>
     </div>
 
-    <script src="/static/app.js?v=6"></script>
+    <script src="/static/app.js?v=7"></script>
 </body>
 </html>
