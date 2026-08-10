@@ -135,6 +135,13 @@ Also update JSearch queries via UI to use `country=US`.
 Edit the profile **Location** tab: preferred locations, exclusions, and Remote / Hybrid / On-site preferences.
 Location fit is computed by `check_location_fit()`; work type by `detect_work_type()`.
 
+By default both only soft-score (nudge relevance / red flags). For hard filters, enable:
+
+- **`location.strict_location_fit`** — drop jobs with `location_fit=no` at collect (and skip them for outreach). Use with preferred/excluded location phrases.
+- **`location.strict_work_type`** — drop jobs whose known work type is not in `work_types` (unknown work type is still kept). Requires at least one work type selected.
+
+Both default to `false` so existing profiles behave as before.
+
 ---
 
 ## Change Score Threshold

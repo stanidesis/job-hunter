@@ -293,10 +293,41 @@ def generate_outreach_for_top_jobs(limit: int = 15, min_score: int = 40,
 
     profile = get_active_profile()
     profile_id = profile.get("_id")
+    loc = profile.get("location") or {}
+
+    # Strict location: never outreach jobs scored as location_fit=no.
+    # Default API path already uses location_fit="maybe"; tighten if caller
+    # passed None (no filter) or explicitly "no".
+    if loc.get("strict_location_fit"):
+        if location_fit is None or location_fit == "no":
+            location_fit = "maybe"
+
+    preferred_work = [
+        wt.lower() for wt in (loc.get("work_types") or []) if wt
+    ]
+    # When strict_work_type and a single preferred type, push filter into SQL.
+    # Multiple preferred types are filtered in Python below.
+    effective_work_type = work_type
+    if (
+        loc.get("strict_work_type")
+        and preferred_work
+        and work_type is None
+        and len(preferred_work) == 1
+    ):
+        effective_work_type = preferred_work[0]
 
     top_jobs = get_jobs(min_score=min_score, location_fit=location_fit,
-                         work_type=work_type, seen_after=seen_after,
+                         work_type=effective_work_type, seen_after=seen_after,
                          limit=limit * 5)
+
+    if loc.get("strict_work_type") and preferred_work:
+        def _work_type_ok(job: dict) -> bool:
+            wt = (job.get("work_type") or "unknown").lower()
+            if wt == "unknown":
+                return True  # unknown kept (same as store path)
+            return wt in preferred_work
+        top_jobs = [j for j in top_jobs if _work_type_ok(j)]
+
     candidates = [j for j in top_jobs if not outreach_exists_for_job(j["id"])][:limit]
 
     # All items in this run share the same timestamp so batch filtering is
