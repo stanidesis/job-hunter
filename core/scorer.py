@@ -8,6 +8,8 @@ All preferences come from the active profile (see core.profile). Callers can
 pass `profile=` to use a specific profile for a batch.
 """
 
+from typing import Optional
+
 from core.profile import get_active_profile
 
 
@@ -275,3 +277,30 @@ def score_job(title: str, description: str, location: str = "",
         "location_note": location_check["note"],
         "work_type": work_type,
     }
+
+
+def fails_strict_filters(score_result: dict, profile: dict = None) -> Optional[str]:
+    """Return a short reason if the job should be hard-dropped under strict flags.
+
+    Flags (profile.location, default false):
+      - strict_location_fit: drop when location_fit == "no"
+      - strict_work_type: drop when preferred work_types is non-empty, work_type
+        is known (not unknown), and work_type is not in preferred
+
+    Returns None when the job may be stored / used for outreach.
+    """
+    profile = profile or get_active_profile()
+    loc = profile.get("location") or {}
+
+    if loc.get("strict_location_fit") and score_result.get("location_fit") == "no":
+        return "strict_location_fit"
+
+    if loc.get("strict_work_type"):
+        preferred = [
+            wt.lower() for wt in (loc.get("work_types") or []) if wt
+        ]
+        work_type = (score_result.get("work_type") or "unknown").lower()
+        if preferred and work_type != "unknown" and work_type not in preferred:
+            return "strict_work_type"
+
+    return None

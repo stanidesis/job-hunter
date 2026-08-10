@@ -663,9 +663,10 @@ async def api_rescore_all(
     delete_below_min: bool = Query(False),
 ):
     """Re-score every job against the active profile. Optionally delete jobs
-    that now score below the profile's min_score_to_store."""
+    that now score below the profile's min_score_to_store or fail strict
+    location / work-type filters."""
     from core.database import get_connection
-    from core.scorer import score_job
+    from core.scorer import score_job, fails_strict_filters
 
     profile = get_active_profile()
     profile_id = profile.get("_id")
@@ -687,7 +688,10 @@ async def api_rescore_all(
             result = score_job(r["title"], r["description"] or "",
                                r["location"] or "", profile=profile)
 
-            if delete_below_min and result["score"] < min_store:
+            if delete_below_min and (
+                result["score"] < min_store
+                or fails_strict_filters(result, profile=profile)
+            ):
                 conn.execute("DELETE FROM jobs WHERE id = ?", (r["id"],))
                 deleted += 1
                 continue

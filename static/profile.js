@@ -134,6 +134,11 @@ function renderEditor() {
         cb.checked = preferredWt.has(cb.value);
     });
 
+    // Strict location / work-type filters (default off)
+    const locCfg = state.config.location || {};
+    document.getElementById('strict-location-fit').checked = !!locCfg.strict_location_fit;
+    document.getElementById('strict-work-type').checked = !!locCfg.strict_work_type;
+
     // Job board sources — empty list means "all" (leave unchecked in UI to match work_types UX)
     const selectedBoards = new Set(
         (state.config.search?.job_board_sources || []).map(x => String(x).toLowerCase())
@@ -305,11 +310,13 @@ function buildConfigFromForm() {
         signal: parseInt(document.getElementById('w-signal').value || 0, 10),
     };
 
-    // Location work types
+    // Location work types + strict flags
     cfg.location = cfg.location || {};
     cfg.location.work_types = Array.from(document.querySelectorAll('.work-type-cb'))
         .filter(cb => cb.checked)
         .map(cb => cb.value);
+    cfg.location.strict_location_fit = document.getElementById('strict-location-fit').checked;
+    cfg.location.strict_work_type = document.getElementById('strict-work-type').checked;
 
     // Job board sources (empty = all boards at collect time)
     cfg.search = cfg.search || {};

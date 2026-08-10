@@ -172,6 +172,25 @@
                     </div>
                 </div>
                 <div class="field">
+                    <label>Strict Filters</label>
+                    <div class="help">
+                        Off by default (soft-score only). When on, collect and outreach hard-drop mismatches
+                        instead of only lowering the score.
+                    </div>
+                    <div class="checkbox-row" id="strict-filters-row">
+                        <label>
+                            <input type="checkbox" id="strict-location-fit">
+                            Strict location fit
+                            <span class="help" style="display:inline;">(drop <code>location_fit=no</code>)</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="strict-work-type">
+                            Strict work type
+                            <span class="help" style="display:inline;">(drop known types not in preference above)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="field">
                     <label>Timezone-Compatible</label>
                     <div class="tag-editor" data-path="location.timezone_compatible"></div>
                 </div>

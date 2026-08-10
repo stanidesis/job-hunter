@@ -67,6 +67,10 @@ def default_config() -> dict:
             "work_types": [],  # remote | hybrid | onsite; empty = any
             "timezone_compatible": [],
             "timezone_incompatible": [],
+            # When true, hard-drop mismatches at collect/store (and outreach).
+            # Default false keeps soft-score behavior (identical to pre-PR3).
+            "strict_location_fit": False,  # drop location_fit == "no"
+            "strict_work_type": False,     # drop known work_type not in work_types
         },
         "outreach": {
             "candidate_name": "",
@@ -132,6 +136,11 @@ def validate_config(config: dict) -> dict:
         if str(wt).lower().replace("on-site", "onsite").replace("on site", "onsite") in allowed_wt
     ]
 
+    # Strict filter flags (bool; accept common truthy strings from YAML/UI)
+    loc = merged["location"]
+    loc["strict_location_fit"] = _as_bool(loc.get("strict_location_fit"), False)
+    loc["strict_work_type"] = _as_bool(loc.get("strict_work_type"), False)
+
     # Normalize job_board_sources (empty = all boards at collect time)
     allowed_boards = set(KNOWN_JOB_BOARD_SOURCES)
     raw_boards = merged["search"].get("job_board_sources") or []
@@ -161,6 +170,19 @@ def validate_config(config: dict) -> dict:
 
     merged["schema_version"] = SCHEMA_VERSION
     return merged
+
+
+def _as_bool(value, default: bool = False) -> bool:
+    """Coerce config values to bool (YAML/JSON/UI-safe)."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return default
 
 
 def _deep_merge(base: dict, override: dict) -> dict:

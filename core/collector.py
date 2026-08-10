@@ -8,7 +8,7 @@ from core.database import (
     insert_job, init_db, get_companies, update_company_crawl_status,
     cleanup_old_jobs,
 )
-from core.scorer import score_job
+from core.scorer import score_job, fails_strict_filters
 from core.profile import get_active_profile, KNOWN_JOB_BOARD_SOURCES
 from sources.remotive import RemotiveSource
 from sources.remoteok import RemoteOKSource
@@ -117,6 +117,11 @@ def _score_and_store(jobs: list[Job], stats: dict, profile: dict = None):
 
         # Filter: drop irrelevant jobs before storing (saves DB space)
         if result["score"] < min_store:
+            stats["filtered_out"] += 1
+            continue
+
+        # Strict location / work-type gates (profile flags; default off)
+        if fails_strict_filters(result, profile=profile):
             stats["filtered_out"] += 1
             continue
 
