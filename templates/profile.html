@@ -83,8 +83,22 @@
                     <div class="tag-editor" data-path="search.relevant_skills"></div>
                 </div>
                 <div class="field">
+                    <label>Job Board Sources</label>
+                    <div class="help">
+                        Which free/paid job boards run during <strong>Collect Jobs</strong>.
+                        Leave all unchecked to use every board (default).
+                        Uncheck remote-only boards (Remotive, RemoteOK, Arbeitnow) for onsite/city searches that should rely on JSearch + company ATS crawl.
+                    </div>
+                    <div class="checkbox-row" id="job-board-sources-row">
+                        <label><input type="checkbox" value="remotive" class="job-board-cb"> Remotive <span class="help" style="display:inline;">(remote)</span></label>
+                        <label><input type="checkbox" value="remoteok" class="job-board-cb"> RemoteOK <span class="help" style="display:inline;">(remote)</span></label>
+                        <label><input type="checkbox" value="arbeitnow" class="job-board-cb"> Arbeitnow <span class="help" style="display:inline;">(remote-leaning)</span></label>
+                        <label><input type="checkbox" value="jsearch" class="job-board-cb"> JSearch <span class="help" style="display:inline;">(multi-location)</span></label>
+                    </div>
+                </div>
+                <div class="field">
                     <label>JSearch Default Queries</label>
-                    <div class="help">Queries used when collecting via JSearch. Set country per query.</div>
+                    <div class="help">Queries used when collecting via JSearch. Set country per query. Only runs if JSearch is enabled above and <code>RAPIDAPI_KEY</code> is set.</div>
                     <div id="jsearch-queries-editor" class="query-rows"></div>
                     <button class="btn btn-sm btn-outline" onclick="addJsearchRow()" style="margin-top:8px;">+ Add query</button>
                 </div>
@@ -287,6 +301,6 @@
         </section>
     </div>
 
-    <script src="/static/profile.js?v=5"></script>
+    <script src="/static/profile.js?v=6"></script>
 </body>
 </html>

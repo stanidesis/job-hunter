@@ -220,12 +220,14 @@ class LinkedInRSSSource(BaseSource):
         return jobs
 ```
 
-Register in `core/collector.py`:
+Register in `core/collector.py` (and add the source id to
+`KNOWN_JOB_BOARD_SOURCES` in `core/profile.py` so profiles can enable it via
+`search.job_board_sources`):
 
 ```python
 from sources.linkedin_rss import LinkedInRSSSource
 
-def _build_job_board_sources():
+def _build_job_board_sources(profile=None):
     sources = [
         RemotiveSource(),
         RemoteOKSource(),

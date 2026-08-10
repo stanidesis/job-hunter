@@ -134,6 +134,14 @@ function renderEditor() {
         cb.checked = preferredWt.has(cb.value);
     });
 
+    // Job board sources — empty list means "all" (leave unchecked in UI to match work_types UX)
+    const selectedBoards = new Set(
+        (state.config.search?.job_board_sources || []).map(x => String(x).toLowerCase())
+    );
+    document.querySelectorAll('.job-board-cb').forEach(cb => {
+        cb.checked = selectedBoards.has(cb.value);
+    });
+
     // Outreach scalars
     const o = state.config.outreach || {};
     document.getElementById('candidate-name').value = o.candidate_name || '';
@@ -300,6 +308,12 @@ function buildConfigFromForm() {
     // Location work types
     cfg.location = cfg.location || {};
     cfg.location.work_types = Array.from(document.querySelectorAll('.work-type-cb'))
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+
+    // Job board sources (empty = all boards at collect time)
+    cfg.search = cfg.search || {};
+    cfg.search.job_board_sources = Array.from(document.querySelectorAll('.job-board-cb'))
         .filter(cb => cb.checked)
         .map(cb => cb.value);
 

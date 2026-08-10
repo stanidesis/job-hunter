@@ -26,6 +26,11 @@ _CACHE_LOCK = threading.Lock()
 _ACTIVE_CACHE: dict = {"id": None, "name": None, "config": None}
 
 
+# Known free/paid job-board source ids the collector understands.
+# Empty search.job_board_sources = enable all (backward compatible).
+KNOWN_JOB_BOARD_SOURCES = ("remotive", "remoteok", "arbeitnow", "jsearch")
+
+
 # ── Defaults ──────────────────────────────────────────────────────────
 
 def default_config() -> dict:
@@ -38,6 +43,8 @@ def default_config() -> dict:
             "title_keywords_negative": [],
             "relevant_skills": [],
             "jsearch_default_queries": [],
+            # Empty = all known boards (compat). Non-empty = only listed boards.
+            "job_board_sources": [],
         },
         "scoring": {
             "experience_target": "mid",
@@ -124,6 +131,20 @@ def validate_config(config: dict) -> dict:
         for wt in raw_wt
         if str(wt).lower().replace("on-site", "onsite").replace("on site", "onsite") in allowed_wt
     ]
+
+    # Normalize job_board_sources (empty = all boards at collect time)
+    allowed_boards = set(KNOWN_JOB_BOARD_SOURCES)
+    raw_boards = merged["search"].get("job_board_sources") or []
+    if not isinstance(raw_boards, list):
+        raw_boards = []
+    seen = set()
+    cleaned_boards = []
+    for name in raw_boards:
+        key = str(name).strip().lower()
+        if key in allowed_boards and key not in seen:
+            seen.add(key)
+            cleaned_boards.append(key)
+    merged["search"]["job_board_sources"] = cleaned_boards
 
     # Email schedule
     out = merged["outreach"]

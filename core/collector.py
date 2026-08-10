@@ -9,7 +9,7 @@ from core.database import (
     cleanup_old_jobs,
 )
 from core.scorer import score_job
-from core.profile import get_active_profile
+from core.profile import get_active_profile, KNOWN_JOB_BOARD_SOURCES
 from sources.remotive import RemotiveSource
 from sources.remoteok import RemoteOKSource
 from sources.arbeitnow import ArbeitnowSource
@@ -29,16 +29,39 @@ def log(msg):
     print(msg, flush=True)
 
 
-def _build_job_board_sources() -> list:
-    """Build the list of sources fresh each run so JSearch uses current queries."""
-    sources = [
-        RemotiveSource(),
-        RemoteOKSource(),
-        ArbeitnowSource(),
-    ]
-    if RAPIDAPI_KEY:
+def _enabled_job_board_names(profile: dict = None) -> set[str]:
+    """Return the set of job-board source names to run for this profile.
+
+    Empty search.job_board_sources (or missing) means all known boards —
+    preserves pre-PR2 behavior.
+    """
+    profile = profile if profile is not None else get_active_profile()
+    selected = (profile.get("search") or {}).get("job_board_sources") or []
+    if not selected:
+        return set(KNOWN_JOB_BOARD_SOURCES)
+    allowed = set(KNOWN_JOB_BOARD_SOURCES)
+    return {str(s).strip().lower() for s in selected if str(s).strip().lower() in allowed}
+
+
+def _build_job_board_sources(profile: dict = None) -> list:
+    """Build the list of sources fresh each run so JSearch uses current queries.
+
+    Honors profile search.job_board_sources: empty = all boards; otherwise only
+    the listed names are enabled (remote-only boards can be turned off for
+    onsite/city searches).
+    """
+    profile = profile if profile is not None else get_active_profile()
+    enabled = _enabled_job_board_names(profile)
+
+    sources = []
+    if "remotive" in enabled:
+        sources.append(RemotiveSource())
+    if "remoteok" in enabled:
+        sources.append(RemoteOKSource())
+    if "arbeitnow" in enabled:
+        sources.append(ArbeitnowSource())
+    if "jsearch" in enabled and RAPIDAPI_KEY:
         # Queries come from the active profile (single source of truth).
-        profile = get_active_profile()
         profile_queries = (profile.get("search") or {}).get("jsearch_default_queries") or []
         queries = [
             {
