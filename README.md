@@ -2,7 +2,7 @@
 
 An automated job discovery and cold outreach system built for software engineers. Finds fresh jobs daily, scores them against a **configurable role profile**, generates personalized LinkedIn outreach templates, and emails a curated list every morning.
 
-**Target user:** Any developer running a job search — comes with presets for **Backend Python (3+ YOE)**, **Frontend React**, and **Fresher**. Swap profiles to retarget the entire pipeline (search queries, scoring weights, outreach copy) without editing code.
+**Target user:** Any developer running a job search — comes with presets for **Backend Python (3+ YOE)**, **Frontend React**, **Fresher**, and an **Onsite City (SF)** example. Swap profiles to retarget the entire pipeline (search queries, scoring weights, outreach copy) without editing code.
 
 ---
 
@@ -40,6 +40,7 @@ Stored as YAML in `profiles/`. Import any of them from the Profile page (or via 
 | `backend_python.yaml` | Python/Django/FastAPI backend, 3+ YOE (the original target) |
 | `frontend_react.yaml` | React/TypeScript frontend roles |
 | `fresher_any.yaml` | Entry-level / 0-1 YOE across any stack |
+| `onsite_city_example.yaml` | Fixed-location onsite/hybrid (SF Bay Area example — retarget by editing city phrases) |
 
 ### What a profile controls
 

@@ -135,12 +135,34 @@ Also update JSearch queries via UI to use `country=US`.
 Edit the profile **Location** tab: preferred locations, exclusions, and Remote / Hybrid / On-site preferences.
 Location fit is computed by `check_location_fit()`; work type by `detect_work_type()`.
 
-By default both only soft-score (nudge relevance / red flags). For hard filters, enable:
+By default both only soft-score (nudge relevance / red flags). For hard filters, enable on the profile (or import the onsite city preset):
 
 - **`location.strict_location_fit`** — drop jobs with `location_fit=no` at collect (and skip them for outreach). Use with preferred/excluded location phrases.
 - **`location.strict_work_type`** — drop jobs whose known work type is not in `work_types` (unknown work type is still kept). Requires at least one work type selected.
 
 Both default to `false` so existing profiles behave as before.
+
+### Onsite / fixed-city search (example preset)
+
+Import **`profiles/onsite_city_example.yaml`** (slug: `onsite_city_example`) from the Profile page. It models a San Francisco Bay Area onsite/hybrid searcher:
+
+| Setting | Example value |
+|---|---|
+| `search.job_board_sources` | `arbeitnow`, `jsearch` only (no Remotive / RemoteOK) |
+| `location.work_types` | `onsite`, `hybrid` |
+| `location.strict_location_fit` / `strict_work_type` | `true` |
+| Preferred phrases | SF / Bay Area city names |
+| JSearch queries | City-qualified, `remote_jobs_only: false` |
+
+**Retarget another city** (edit the imported profile or the YAML, then re-import with overwrite):
+
+1. Replace `location.preferred_locations` with your metro phrases (e.g. `"austin"`, `"seattle"`, `"berlin"`).
+2. Update `location.excluded_locations` for places you will not take.
+3. Rewrite `search.default_terms` and `search.jsearch_default_queries` so every query includes the city/region.
+4. Keep `work_types: [onsite, hybrid]` and the strict flags if you want hard drops for remote-only or wrong-city jobs.
+5. Adjust `outreach.email_timezone` / digest copy if the metro’s timezone differs.
+
+Company ATS collection still runs for all profiles; board selection only affects free/paid job boards.
 
 ---
 
