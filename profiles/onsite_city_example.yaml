@@ -1,0 +1,187 @@
+# Onsite / hybrid city searcher example (San Francisco Bay Area).
+#
+# Retarget another city:
+#   1. Replace preferred_locations phrases with your city/metro names
+#   2. Update excluded_locations (drop other metros you will not relocate to)
+#   3. Rewrite jsearch_default_queries and default_terms to include the city
+#   4. Keep work_types: [onsite, hybrid] and strict_* true if you want hard drops
+#   5. Import (or re-import overwrite) from the Profile page
+#
+# Boards: no Remotive / RemoteOK — those are remote-only and fight onsite search.
+name: "Onsite City Example (SF)"
+description: >
+  Fixed-location onsite/hybrid searcher for the San Francisco Bay Area.
+  Edit preferred_locations, JSearch queries, and default_terms to retarget
+  another city. Strict location + work-type filters enabled; Remotive/RemoteOK off.
+schema_version: 2
+
+search:
+  default_terms:
+    - "software engineer san francisco"
+    - "backend engineer bay area"
+    - "python developer san francisco"
+    - "software engineer sf hybrid"
+  title_keywords_positive:
+    - "backend"
+    - "back-end"
+    - "back end"
+    - "python"
+    - "software engineer"
+    - "software developer"
+    - "full stack"
+    - "fullstack"
+    - "full-stack"
+    - "api developer"
+    - "platform engineer"
+  title_keywords_negative:
+    - "frontend only"
+    - "ios"
+    - "android"
+    - "mobile"
+    - "data scientist"
+    - "machine learning"
+    - "ml engineer"
+    - "ui/ux"
+    - "designer"
+    - "qa"
+    - "test"
+    - "intern"
+    - "internship"
+    - "trainee"
+  relevant_skills:
+    - "python"
+    - "django"
+    - "fastapi"
+    - "flask"
+    - "postgresql"
+    - "postgres"
+    - "mysql"
+    - "redis"
+    - "docker"
+    - "kubernetes"
+    - "aws"
+    - "gcp"
+    - "rest"
+    - "graphql"
+    - "sql"
+    - "microservices"
+  # City-focused boards only — omit remotive / remoteok (remote-only boards).
+  job_board_sources:
+    - arbeitnow
+    - jsearch
+  jsearch_default_queries:
+    - { query: "software engineer san francisco", country: "us", date_posted: "3days", remote_jobs_only: false }
+    - { query: "backend engineer bay area", country: "us", date_posted: "3days", remote_jobs_only: false }
+    - { query: "python developer san francisco", country: "us", date_posted: "week", remote_jobs_only: false }
+    - { query: "software engineer hybrid san francisco", country: "us", date_posted: "week", remote_jobs_only: false }
+    - { query: "platform engineer sf bay area", country: "us", date_posted: "week", remote_jobs_only: false }
+
+scoring:
+  experience_target: "mid"
+  min_relevance_score: 50
+  min_score_to_store: 25
+  weights: { title: 35, skills: 35, experience: 15, signal: 15 }
+  core_skills:
+    - "python"
+    - "django"
+    - "fastapi"
+    - "sql"
+  domain_signals:
+    - "api"
+    - "backend"
+    - "platform"
+    - "microservice"
+    - "database"
+    - "rest"
+
+location:
+  # Soft + hard location fit: preferred phrases for the SF metro.
+  preferred_locations:
+    - "san francisco"
+    - "sf bay area"
+    - "bay area"
+    - "sf,"
+    - "sf "
+    - "south bay"
+    - "peninsula"
+    - "silicon valley"
+    - "palo alto"
+    - "mountain view"
+    - "sunnyvale"
+    - "san jose"
+    - "oakland"
+    - "berkeley"
+    - "redwood city"
+    - "menlo park"
+    - "california"
+    - "ca,"
+  excluded_locations:
+    - "remote only"
+    - "fully remote"
+    - "work from anywhere"
+    - "worldwide only"
+    - "india only"
+    - "europe only"
+    - "emea only"
+    - "uk only"
+    - "new york only"
+    - "nyc only"
+    - "seattle only"
+    - "austin only"
+    - "boston only"
+    - "must be located in europe"
+    - "must reside in india"
+  # Prefer office-capable roles; remote-only jobs fail strict_work_type when PR3 is active.
+  work_types:
+    - onsite
+    - hybrid
+  strict_location_fit: true
+  strict_work_type: true
+  timezone_compatible:
+    - "pst"
+    - "pdt"
+    - "pacific"
+    - "pt"
+    - "america/los_angeles"
+    - "flexible"
+  timezone_incompatible:
+    - "ist only"
+    - "india timezone"
+    - "europe only hours"
+    - "uk hours only"
+    - "est only"
+    - "core hours est"
+
+outreach:
+  candidate_name: ""
+  candidate_core_skills: ["python", "django", "fastapi"]
+  candidate_extra_skills: ["postgresql", "aws", "docker", "microservices"]
+  linkedin_search_titles:
+    - { title: "Engineering Manager", label: "Eng Manager", category: "engineering" }
+    - { title: "Tech Lead", label: "Tech Lead", category: "engineering" }
+    - { title: "Head of Engineering", label: "Head of Eng", category: "executive" }
+    - { title: "CTO", label: "CTO", category: "executive" }
+    - { title: "Technical Recruiter", label: "Tech Recruiter", category: "hr" }
+    - { title: "Talent Acquisition", label: "TA", category: "hr" }
+  bio_short: "3+ years building {skills} backends, open to SF Bay Area onsite/hybrid"
+  achievements:
+    - "Shipped production APIs serving thousands of users."
+    - "Comfortable collaborating in-office and hybrid with Bay Area teams."
+  dm_short_template: "{greeting}, I noticed {company} is hiring for {title} in the Bay Area. I have {bio_short}. Would love to connect."
+  dm_long_template: |
+    {greeting},
+
+    Noticed {company} is hiring for {title}. I've been shipping {skills} backends and am targeting onsite/hybrid roles in the SF Bay Area.
+
+    {achievements}
+
+    Open to a short chat?
+
+    Thanks,
+    {candidate_name}
+  email_digest_subject_role: "sf-onsite"
+  email_greeting: "Your Daily Bay Area Job Digest"
+  recipient_email: ""
+  email_hour: 9
+  email_minute: 0
+  email_timezone: "America/Los_Angeles"
