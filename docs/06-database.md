@@ -106,7 +106,7 @@ User-configurable JSearch queries.
 |---|---|---|---|
 | `id` | INTEGER PRIMARY KEY AUTOINCREMENT | — | |
 | `query` | TEXT NOT NULL | — | e.g., `python django backend developer` |
-| `country` | TEXT | 'IN' | 2-letter code |
+| `country` | TEXT | 'us' | ISO 3166-1 alpha-2 (lowercase) |
 | `date_posted` | TEXT | '3days' | today / 3days / week / month / all |
 | `remote_jobs_only` | INTEGER | 0 | 1 = only remote |
 | `enabled` | INTEGER | 1 | 0 = disabled (skipped in collection) |

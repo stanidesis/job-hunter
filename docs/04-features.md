@@ -17,7 +17,7 @@ Every page, button, and feature explained.
 Shows counts for:
 - Total jobs in DB
 - Avg relevance score
-- India-friendly breakdown (yes/maybe/no)
+- Location-fit breakdown (yes/maybe/no)
 - Top sources
 
 ### Filters Row
@@ -27,7 +27,7 @@ Shows counts for:
 | Source | greenhouse:stripe, jsearch, remotive, etc. |
 | Status | new / reviewed / applied / stale |
 | Min Score | 30+ / 50+ / 60+ / 70+ |
-| India Remote | India Friendly / India + Maybe / Not India |
+| Location fit | Yes / Maybe / No |
 | Location | Free text (Bangalore, Remote, etc.) |
 | Tech | Filter by tech stack keyword (python, django) |
 
@@ -36,7 +36,7 @@ Each card shows:
 
 ```
 [☑]  [Score]   Title
-               Company · Location · Source · Salary · Posted date · [India badge] · Last seen
+               Company · Location · Source · Salary · Posted date · [location-fit badge] · Last seen
                [tech tags]
                                                             [status badge] [📧 Marked]
 ```
@@ -51,7 +51,7 @@ Each card shows:
 
 ### Job Detail Modal
 - Full job description (scrollable)
-- All metadata + India-friendly explanation
+- All metadata + location-fit explanation
 - Buttons:
   - **Mark Reviewed** — you've looked at it
   - **Mark Applied** — submitted application (protects from auto-delete)
@@ -68,22 +68,23 @@ Click **"Search Queries"** button on Jobs page.
 Shows all JSearch queries. Each row:
 - **On/Off toggle** — disable queries to save API credits
 - **Query text** — editable inline
-- **Country** — IN / US / GB / CA / DE / SG
+- **Country** — expanded ISO alpha-2 list (US, CA, GB, DE, IN, JP, BR, AE, … — see customization docs)
 - **Posted** — today / 3days / week / month / all
 - **Remote only** — checkbox
 - **Delete** — removes the query
 
 **Add New Query section:**
 - Query input (e.g., "python backend senior")
-- Country dropdown
+- Country dropdown (same expanded list)
 - Posted timeframe
 - Remote-only checkbox
 - **Add** button
 
 **How it works:**
 - Every time "Collect Jobs" runs, all enabled queries fire
+- If the active profile has `jsearch_location_suffix` set, that city/region is appended to each query string at collect
 - Each query = 1 JSearch credit
-- Default 6 queries = 6 credits per run (about 30 runs/month with free tier)
+- Free tier is limited (~200 requests/month) — disable unused queries to save credits
 
 ---
 
@@ -194,7 +195,7 @@ If configured (requires `GOOGLE_SHEETS_CREDS` + `GOOGLE_SHEET_ID` in `.env`):
 Click **Export to Sheets** on Jobs page. Modal lets you:
 - Set sheet tab name
 - Min score filter
-- India-friendly filter
+- Location-fit / work-type filters
 - Mode: Replace (clear + rewrite) or Append (add rows)
 
 Pushes all matching jobs to your Google Sheet. Useful for:

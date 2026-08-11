@@ -95,7 +95,7 @@ Add a new search query.
 ```json
 {
   "query": "python backend senior",
-  "country": "IN",
+  "country": "us",
   "date_posted": "3days",
   "remote_jobs_only": false
 }

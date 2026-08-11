@@ -11,9 +11,9 @@ How the candidate uses this system day-to-day.
 **Check email.** The daily digest has arrived with 15 matching jobs.
 
 Each card in the email has:
-- **Job title** + Company + Score + India-friendly status
+- **Job title** + Company + Score + location-fit / work-type badges
 - **Apply button** — direct link to apply
-- **7 LinkedIn search buttons** — grouped into Engineering / C-Level / HR
+- **LinkedIn search buttons** — titles configured on your profile (Eng Manager, CTO, HR, …)
 - **Ready-to-copy DM** — personalized for the role
 
 ### For each of the 15 jobs (~1 min each = 15 min total):
@@ -84,46 +84,54 @@ Expected results:
 
 ## Working Through a Job Card (Example)
 
-Scenario: **Senior Backend Engineer @ Razorpay** (Score: 72, India Friendly)
+Scenario: **Senior Backend Engineer @ Stripe** (Score: 72, location fit: yes)
 
 ### Step 1: Read the job description
 Click the card → modal opens with full description. Quick scan:
 - ✅ Python/Django/FastAPI mentioned
 - ✅ 3-5 years experience required
-- ✅ Bangalore (hybrid)
-- ✅ Good comp
+- ✅ Location matches your profile (city / hybrid / remote)
+- ✅ Comp and level look right
 
 ### Step 2: Apply
-Click "Apply to Job" → Razorpay careers page opens. Submit resume.
+Click "Apply to Job" → company careers page opens. Submit resume.
 
 ### Step 3: Find a contact
-In the email, click "🔍 Engineering Manager" (blue button).
+In the email, click a LinkedIn search button (e.g. Engineering Manager).
 
-LinkedIn opens with: `keywords=Razorpay Engineering Manager`
-
-Results appear. Pick:
-- **Rahul Sharma — Engineering Manager @ Razorpay** (500+ connections, active poster)
+LinkedIn opens with people at that company matching the title. Pick someone active and at the right level.
 
 ### Step 4: Connect with DM
 Click "Connect" → "Add a note":
 
-Paste the DM from the email:
-> Hi there, I noticed Razorpay is hiring for Senior Backend Engineer. I have 3+ years building Python/Django backends — shipped a healthcare SaaS serving 5,000+ users with sub-200ms APIs. Would love to connect.
-
-**But personalize it first:** Change "Hi there" → "Hi Rahul"
+Paste the DM from the email, then personalize the greeting with their first name.
 
 Click Send.
 
 ### Step 5: Mark status
-Go to outreach page → find the Razorpay card → click "Mark Messaged".
+Go to outreach page → find the card → click "Mark Messaged".
+
+---
+
+## Onsite / city-focused search
+
+If you are targeting a fixed city rather than remote-first:
+
+1. Open **Profile → Search**
+2. Enable **JSearch** (disable Remotive/RemoteOK if you do not want remote-only boards)
+3. Set **JSearch Location Suffix** to your city (e.g. `Austin, TX`)
+4. Add role queries; leave **Remote** unchecked; pick the right **country**
+5. On **Location**, set preferred city phrases and work types (On-site / Hybrid)
+6. Click **Collect Jobs**
+
+Full recipe and country-code table: [07-customization.md](07-customization.md).
 
 ---
 
 ## Best Practices
 
 ### When to send DMs
-- **Weekdays, 10 AM - 6 PM IST** (recipient is in India)
-- **Weekdays, 8-10 AM EST** (for US-based companies)
+- **Weekdays, business hours in the recipient's timezone** (match the company HQ or hiring manager location)
 - **Avoid Friday evenings and weekends**
 
 ### Message tone
@@ -154,7 +162,7 @@ Besides the daily email, you can use the web UI anytime:
 
 **Use cases:**
 - Browse all jobs (not just today's 15)
-- Filter by score, company, tech, India-friendly
+- Filter by score, company, tech, location fit, work type
 - Mark specific jobs for email (checkbox on each card)
 - Update application status
 

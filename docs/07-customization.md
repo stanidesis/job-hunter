@@ -98,42 +98,87 @@ relevant_skills (profile) = [
 
 ## Change JSearch Queries
 
-Use the UI (Search Queries modal) — no code changes needed.
+Use the **Profile → Search** tab (or the dashboard **Search Queries** modal) — no code changes needed.
 
-Default queries are in `core/database.py` → `init_db()`:
-```python
-defaults = [
-    ("python django backend developer", "IN", "3days", 0),
-    ...
-]
-```
+Queries live on the active profile under `search.jsearch_default_queries`. Each row has:
 
-First-run seed only. After that, use UI.
+| Field | Purpose |
+|---|---|
+| `query` | Free-text search terms |
+| `country` | ISO 3166-1 alpha-2 market (see table below) |
+| `date_posted` | `today` / `3days` / `week` / `month` / `all` |
+| `remote_jobs_only` | Restrict JSearch to remote listings |
+
+Optional **`search.jsearch_location_suffix`** (Profile → Search) is appended to every query string **at collect time**. Example: suffix `San Francisco` turns `python engineer` into `python engineer San Francisco`. If the query already contains the phrase, it is not doubled.
 
 ---
 
 ## Change Geography
 
-### Target a different country
-Update `config/settings.py`:
+### Location & work type (preferred path)
 
-```python
-# For US jobs only
-LOCATION_POSITIVE = [
-    "united states", "us", "usa", "remote us",
-    "worldwide", "global", "anywhere",
-]
+Edit the profile **Location** tab:
 
-LOCATION_NEGATIVE = [
-    "india only", "emea only", "uk only",
-]
+- **Preferred locations** — cities, regions, countries, or phrases like `worldwide` / `remote`
+- **Excluded locations** — places you will not take
+- **Work types** — Remote / Hybrid / On-site (empty = any)
+
+Location fit is computed by `check_location_fit()`; work type by `detect_work_type()`. Both soft-score by default (nudge relevance / red flags).
+
+### Target a different country (JSearch)
+
+1. Set each JSearch query’s **country** to the 2-letter code for your market (UI dropdowns on Profile and Search Queries modal).
+2. Optionally set **`jsearch_location_suffix`** to a city/region so every query is geo-qualified without editing each string.
+3. Set preferred/excluded location phrases on the Location tab to match.
+
+### Country codes (JSearch)
+
+Codes are ISO 3166-1 alpha-2 (lowercase in config; uppercase in the UI). Full list in `core.profile.JSEARCH_COUNTRY_CODES`:
+
+| Region | Codes |
+|---|---|
+| North America | `us`, `ca`, `mx` |
+| UK & Ireland | `gb`, `ie` |
+| Western Europe | `de`, `fr`, `nl`, `be`, `ch`, `at`, `es`, `it`, `pt` |
+| Nordics | `se`, `no`, `dk`, `fi` |
+| Central / Eastern Europe | `pl`, `cz`, `ro`, `hu`, `ua` |
+| South Asia | `in`, `pk`, `bd` |
+| APAC | `sg`, `au`, `nz`, `jp`, `kr`, `cn`, `hk`, `tw`, `my`, `id`, `th`, `ph`, `vn` |
+| Middle East & Africa | `ae`, `sa`, `il`, `tr`, `eg`, `za`, `ng`, `ke` |
+| Latin America | `br`, `ar`, `cl`, `co` |
+
+### Recipe: onsite / fixed-city search (end-to-end)
+
+Use this path when you want roles in a specific city (not remote-first):
+
+1. **Job boards** — Profile → Search → Job Board Sources: enable **JSearch** (and optionally Arbeitnow). Leave **Remotive** / **RemoteOK** unchecked so remote-only boards do not dominate. Empty selection = all boards (remote-heavy).
+2. **JSearch location suffix** — set to your city/region, e.g. `Austin, TX` or `Berlin`.
+3. **JSearch queries** — role/stack terms without baking the city into every string (the suffix is applied at collect). Set `country` to the market (`us`, `de`, …). Leave **Remote** unchecked on queries (`remote_jobs_only: false`).
+4. **Location tab** — preferred phrases for your metro; exclude regions you skip; set work types to **On-site** and/or **Hybrid**.
+5. **Collect Jobs** — collector builds `query + " " + suffix` for each enabled JSearch row, then scores with location fit / work type.
+6. **Company ATS** — still runs for active companies regardless of board selection; use Discover / seed tools for employers in your market (see PR6 for non-remote discovery paths).
+
+YAML sketch:
+
+```yaml
+search:
+  job_board_sources: [jsearch]
+  jsearch_location_suffix: "Austin, TX"
+  jsearch_default_queries:
+    - { query: "software engineer", country: "us", date_posted: "week", remote_jobs_only: false }
+    - { query: "backend engineer python", country: "us", date_posted: "3days", remote_jobs_only: false }
+location:
+  preferred_locations: ["austin", "texas", "tx", "remote us"]
+  excluded_locations: ["europe only", "emea only"]
+  work_types: [onsite, hybrid]
 ```
 
-Also update JSearch queries via UI to use `country=US`.
+### Recipe: remote-first (default style)
 
-### Location & work type
-Edit the profile **Location** tab: preferred locations, exclusions, and Remote / Hybrid / On-site preferences.
-Location fit is computed by `check_location_fit()`; work type by `detect_work_type()`.
+- Leave `jsearch_location_suffix` empty.
+- Enable all boards or include Remotive / RemoteOK.
+- Mark some JSearch queries with **Remote** checked.
+- Preferred locations can include `remote`, `worldwide`, `global`.
 
 By default both only soft-score (nudge relevance / red flags). For hard filters, enable on the profile (or import the onsite city preset):
 

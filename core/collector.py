@@ -43,12 +43,32 @@ def _enabled_job_board_names(profile: dict = None) -> set[str]:
     return {str(s).strip().lower() for s in selected if str(s).strip().lower() in allowed}
 
 
+def apply_jsearch_location_suffix(query: str, suffix: str) -> str:
+    """Append profile location suffix to a JSearch query text.
+
+    Skips append when suffix is empty or already present (case-insensitive
+    substring match) so city-qualified queries are not doubled.
+    """
+    q = (query or "").strip()
+    s = (suffix or "").strip()
+    if not s:
+        return q
+    if not q:
+        return s
+    if s.lower() in q.lower():
+        return q
+    return f"{q} {s}"
+
+
 def _build_job_board_sources(profile: dict = None) -> list:
     """Build the list of sources fresh each run so JSearch uses current queries.
 
     Honors profile search.job_board_sources: empty = all boards; otherwise only
     the listed names are enabled (remote-only boards can be turned off for
     onsite/city searches).
+
+    When search.jsearch_location_suffix is set, it is appended to each JSearch
+    query string at collect time (e.g. city/region for onsite searches).
     """
     profile = profile if profile is not None else get_active_profile()
     enabled = _enabled_job_board_names(profile)
@@ -62,11 +82,13 @@ def _build_job_board_sources(profile: dict = None) -> list:
         sources.append(ArbeitnowSource())
     if "jsearch" in enabled and RAPIDAPI_KEY:
         # Queries come from the active profile (single source of truth).
-        profile_queries = (profile.get("search") or {}).get("jsearch_default_queries") or []
+        search_cfg = profile.get("search") or {}
+        profile_queries = search_cfg.get("jsearch_default_queries") or []
+        location_suffix = (search_cfg.get("jsearch_location_suffix") or "").strip()
         queries = [
             {
-                "query": q["query"],
-                "country": q.get("country", "IN"),
+                "query": apply_jsearch_location_suffix(q["query"], location_suffix),
+                "country": (q.get("country") or "us").lower(),
                 "date_posted": q.get("date_posted", "3days"),
                 **({"remote_jobs_only": "true"} if q.get("remote_jobs_only") else {}),
             }
