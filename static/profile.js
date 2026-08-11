@@ -147,6 +147,10 @@ function renderEditor() {
         cb.checked = selectedBoards.has(cb.value);
     });
 
+    // JSearch location suffix (appended to queries at collect)
+    document.getElementById('jsearch-location-suffix').value =
+        state.config.search?.jsearch_location_suffix || '';
+
     // Outreach scalars
     const o = state.config.outreach || {};
     document.getElementById('candidate-name').value = o.candidate_name || '';
@@ -214,6 +218,15 @@ function readTagEditor(container) {
 }
 
 // ── JSearch queries ───────────────────────────────────────────
+// ISO 3166-1 alpha-2 — keep in sync with core.profile.JSEARCH_COUNTRY_CODES
+const JSEARCH_COUNTRY_CODES = [
+    'us','ca','gb','ie','de','fr','nl','be','ch','at',
+    'se','no','dk','fi','es','it','pt','pl','cz','ro',
+    'hu','in','sg','au','nz','jp','kr','cn','hk','tw',
+    'my','id','th','ph','vn','ae','sa','il','tr','br',
+    'mx','ar','cl','co','za','ng','ke','eg','pk','bd',
+    'ua',
+];
 
 function renderJsearchRows(queries) {
     const root = document.getElementById('jsearch-queries-editor');
@@ -224,11 +237,15 @@ function renderJsearchRows(queries) {
 function jsearchRow(q = {}) {
     const div = document.createElement('div');
     div.className = 'query-row jsearch';
+    const country = (q.country || 'us').toLowerCase();
+    const countries = JSEARCH_COUNTRY_CODES.includes(country)
+        ? JSEARCH_COUNTRY_CODES
+        : [country, ...JSEARCH_COUNTRY_CODES];
     div.innerHTML = `
         <input class="q-query" placeholder="query text" value="${escapeAttr(q.query || '')}">
         <select class="q-country">
-            ${['us','gb','ca','de','au','sg','in','nl'].map(c =>
-                `<option value="${c}" ${(q.country || 'us').toLowerCase() === c ? 'selected' : ''}>${c.toUpperCase()}</option>`).join('')}
+            ${countries.map(c =>
+                `<option value="${c}" ${country === c ? 'selected' : ''}>${c.toUpperCase()}</option>`).join('')}
         </select>
         <select class="q-date">
             ${['today','3days','week','month','all'].map(d =>
@@ -323,6 +340,8 @@ function buildConfigFromForm() {
     cfg.search.job_board_sources = Array.from(document.querySelectorAll('.job-board-cb'))
         .filter(cb => cb.checked)
         .map(cb => cb.value);
+    cfg.search.jsearch_location_suffix =
+        (document.getElementById('jsearch-location-suffix').value || '').trim();
 
     // Outreach scalars
     cfg.outreach.candidate_name = document.getElementById('candidate-name').value;

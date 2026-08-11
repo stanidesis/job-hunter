@@ -8,6 +8,16 @@ const state = {
     collecting: false,
 };
 
+// ISO 3166-1 alpha-2 — keep in sync with core.profile.JSEARCH_COUNTRY_CODES / profile.js
+const JSEARCH_COUNTRY_CODES = [
+    'us','ca','gb','ie','de','fr','nl','be','ch','at',
+    'se','no','dk','fi','es','it','pt','pl','cz','ro',
+    'hu','in','sg','au','nz','jp','kr','cn','hk','tw',
+    'my','id','th','ph','vn','ae','sa','il','tr','br',
+    'mx','ar','cl','co','za','ng','ke','eg','pk','bd',
+    'ua',
+];
+
 // ── API ──
 async function api(path, opts = {}) {
     const resp = await fetch(`/api${path}`, opts);
@@ -482,7 +492,15 @@ async function loadQueries() {
                         <td style="padding:8px 4px;">
                             <select onchange="updateQueryField(${q.id}, 'country', this.value)"
                                 style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px;font-size:13px;">
-                                ${['IN','US','GB','CA','DE','SG'].map(c => `<option value="${c}" ${c===q.country?'selected':''}>${c}</option>`).join('')}
+                                ${(() => {
+                                    const cur = (q.country || 'us').toLowerCase();
+                                    const codes = JSEARCH_COUNTRY_CODES.includes(cur)
+                                        ? JSEARCH_COUNTRY_CODES
+                                        : [cur, ...JSEARCH_COUNTRY_CODES];
+                                    return codes.map(c =>
+                                        `<option value="${c}" ${c === cur ? 'selected' : ''}>${c.toUpperCase()}</option>`
+                                    ).join('');
+                                })()}
                             </select>
                         </td>
                         <td style="padding:8px 4px;">

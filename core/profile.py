@@ -30,6 +30,17 @@ _ACTIVE_CACHE: dict = {"id": None, "name": None, "config": None}
 # Empty search.job_board_sources = enable all (backward compatible).
 KNOWN_JOB_BOARD_SOURCES = ("remotive", "remoteok", "arbeitnow", "jsearch")
 
+# ISO 3166-1 alpha-2 codes offered in JSearch country dropdowns (UI + docs).
+# Values are lowercase to match profile/DB storage; labels are uppercase in UI.
+JSEARCH_COUNTRY_CODES = (
+    "us", "ca", "gb", "ie", "de", "fr", "nl", "be", "ch", "at",
+    "se", "no", "dk", "fi", "es", "it", "pt", "pl", "cz", "ro",
+    "hu", "in", "sg", "au", "nz", "jp", "kr", "cn", "hk", "tw",
+    "my", "id", "th", "ph", "vn", "ae", "sa", "il", "tr", "br",
+    "mx", "ar", "cl", "co", "za", "ng", "ke", "eg", "pk", "bd",
+    "ua",
+)
+
 
 # ── Defaults ──────────────────────────────────────────────────────────
 
@@ -45,6 +56,9 @@ def default_config() -> dict:
             "jsearch_default_queries": [],
             # Empty = all known boards (compat). Non-empty = only listed boards.
             "job_board_sources": [],
+            # Optional city/region phrase appended to every JSearch query at collect.
+            # e.g. "San Francisco" → "python engineer" becomes "python engineer San Francisco".
+            "jsearch_location_suffix": "",
         },
         "scoring": {
             "experience_target": "mid",
@@ -154,6 +168,12 @@ def validate_config(config: dict) -> dict:
             seen.add(key)
             cleaned_boards.append(key)
     merged["search"]["job_board_sources"] = cleaned_boards
+
+    # Optional JSearch location suffix (city/region appended at collect time)
+    suffix = merged["search"].get("jsearch_location_suffix") or ""
+    if not isinstance(suffix, str):
+        suffix = str(suffix) if suffix is not None else ""
+    merged["search"]["jsearch_location_suffix"] = suffix.strip()
 
     # Email schedule
     out = merged["outreach"]

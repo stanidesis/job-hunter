@@ -24,8 +24,8 @@
 │  • Title keywords (backend, python, django) → +points          │
 │  • Tech stack match (python/django/fastapi) → +points          │
 │  • Experience level (mid/3+ yrs) → +points                     │
-│  • India-friendly check (location + timezone)                  │
-│  • Jobs scoring < 25 are DROPPED (not stored)                  │
+│  • Location fit + work type (preferred/excluded, remote/hybrid/onsite) │
+│  • Jobs scoring < min_score_to_store are DROPPED (not stored)  │
 └────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -50,10 +50,10 @@
                               │
                               ▼
 ┌────────────────────────────────────────────────────────────────┐
-│                 Daily Email at 9:00 AM IST                     │
+│            Daily Email (hour/timezone from active profile)     │
 │  • APScheduler triggers pipeline                               │
 │  • 15 job cards in HTML email                                  │
-│  • Each card: job info + 7 search buttons + DM + apply link    │
+│  • Each card: job info + LinkedIn search buttons + DM + apply  │
 │  • Sent via Resend API                                         │
 │  • Marked as emailed — won't resend next day                   │
 └────────────────────────────────────────────────────────────────┘
@@ -95,16 +95,21 @@ See [06-database.md](06-database.md) for schema details.
 ## Two Tracks of Job Collection
 
 ### Track A: Job Boards
-Runs on every "Collect Jobs" click. Fetches from 4 sources in parallel:
+Runs on every "Collect Jobs" click. Which boards run is controlled by
+`search.job_board_sources` on the active profile (empty = all four):
 
 | Source | Type | What it returns |
 |---|---|---|
 | Remotive | Public API | Remote tech jobs |
 | RemoteOK | Public API | Remote tech jobs |
-| Arbeitnow | Public API | European remote |
-| JSearch | RapidAPI (paid tier free) | LinkedIn + Indeed + Glassdoor aggregated |
+| Arbeitnow | Public API | European / remote-leaning |
+| JSearch | RapidAPI (free tier) | LinkedIn + Indeed + Glassdoor aggregated (any country) |
 
-JSearch runs 6 configurable queries (user can edit via UI), covering India + remote + US.
+JSearch queries come from the active profile (`jsearch_default_queries`). Each
+query has a **country** (ISO alpha-2) and optional remote-only flag. If
+`search.jsearch_location_suffix` is set (e.g. a city name), the collector
+appends it to every query string at collect time so onsite/city searches stay
+DRY.
 
 ### Track B: Company ATS Crawl
 For each active company in `companies` table:

@@ -97,8 +97,18 @@
                     </div>
                 </div>
                 <div class="field">
+                    <label>JSearch Location Suffix</label>
+                    <div class="help">
+                        Optional city/region phrase appended to every JSearch query at collect time.
+                        Example: <code>San Francisco</code> turns <code>python engineer</code> into
+                        <code>python engineer San Francisco</code>. Leave blank for remote-only searches.
+                        Skipped when the query already contains the phrase.
+                    </div>
+                    <input type="text" id="jsearch-location-suffix" placeholder="e.g. Austin, TX or Berlin" class="text-input">
+                </div>
+                <div class="field">
                     <label>JSearch Default Queries</label>
-                    <div class="help">Queries used when collecting via JSearch. Set country per query. Only runs if JSearch is enabled above and <code>RAPIDAPI_KEY</code> is set.</div>
+                    <div class="help">Queries used when collecting via JSearch. Set country per query. Only runs if JSearch is enabled above and <code>RAPIDAPI_KEY</code> is set. Pair with the location suffix above for onsite/city searches instead of baking the city into every query string.</div>
                     <div id="jsearch-queries-editor" class="query-rows"></div>
                     <button class="btn btn-sm btn-outline" onclick="addJsearchRow()" style="margin-top:8px;">+ Add query</button>
                 </div>

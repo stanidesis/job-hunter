@@ -46,9 +46,9 @@ Stored as YAML in `profiles/`. Import any of them from the Profile page (or via 
 
 A profile is one row in the `profiles` table (JSON config), with sections matching the **Profile page tabs**:
 
-- **Search** — default search terms, positive/negative title keywords, relevant skills list, JSearch queries (country, posted-window, remote-only)
+- **Search** — default search terms, positive/negative title keywords, relevant skills list, job-board selection, JSearch queries (country, posted-window, remote-only), optional **JSearch location suffix** (city/region appended to every query at collect)
 - **Scoring** — experience target (`fresher` / `junior` / `mid` / `senior` / `any`), min-score-to-show, min-score-to-store, weights for title/tech/experience/signals (sum to 100), core tech, domain signals
-- **Location** — preferred / excluded locations, work types (remote/hybrid/on-site), timezone lists
+- **Location** — preferred / excluded locations, work types (remote/hybrid/on-site), timezone lists — use with JSearch country + location suffix for fixed-city / onsite searches (see [docs/07-customization.md](docs/07-customization.md))
 - **Outreach** — candidate name, bio, achievements, core/extra tech, short + long DM templates, LinkedIn search titles, email greeting, sender + recipient email, digest subject role word
 
 ### UI — `/profile` page
