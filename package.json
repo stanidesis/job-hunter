@@ -1,6 +1,6 @@
 {
   "name": "job-hunter",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Job discovery and cold outreach system (version source for Docker tags + changelog)",
   "scripts": {
